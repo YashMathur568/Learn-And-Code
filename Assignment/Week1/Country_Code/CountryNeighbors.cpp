@@ -2,6 +2,32 @@
 
 #include <unordered_map>
 
+const std::unordered_map<std::string, std::string> countryNameMap =
+{
+    {"IN", "India"},
+    {"US", "United States"},
+    {"CA", "Canada"},
+    {"MX", "Mexico"},
+    {"CN", "China"},
+    {"RU", "Russia"},
+    {"KR", "South Korea"},
+    {"KP", "North Korea"},
+    {"PK", "Pakistan"},
+    {"AF", "Afghanistan"},
+    {"IR", "Iran"},
+    {"TR", "Turkey"},
+    {"FR", "France"},
+    {"DE", "Germany"},
+    {"IT", "Italy"},
+    {"ES", "Spain"},
+    {"BR", "Brazil"},
+    {"AR", "Argentina"},
+    {"NZ", "New Zealand"},
+    {"EG", "Egypt"},
+    {"SA", "Saudi Arabia"},
+    {"ZA", "South Africa"}
+};
+
 
 const std::unordered_map<std::string, std::vector<std::string>> neighborMap =
 {
@@ -28,6 +54,18 @@ const std::unordered_map<std::string, std::vector<std::string>> neighborMap =
     { "SA", { "Jordan", "Iraq", "Kuwait", "Qatar","United Arab Emirates", "Oman", "Yemen" } },
     { "ZA", { "Namibia", "Botswana", "Zimbabwe","Mozambique", "Eswatini", "Lesotho" } }
 };
+
+std::string CountryNeighbors::getCountryFullName(const std::string& countryCode)
+{
+    auto iterator = countryNameMap.find(countryCode);
+
+    if (iterator != countryNameMap.end())
+    {
+        return iterator->second;
+    }
+
+    return countryCode;
+}
 
 std::vector<std::string> CountryNeighbors::getNeighborCountries(const std::string& countryCode)
 {

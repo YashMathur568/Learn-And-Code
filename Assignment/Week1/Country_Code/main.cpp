@@ -76,11 +76,12 @@ int main()
             continue;
         }
 
-        auto neighbors =
-            CountryNeighbors::getNeighborCountries(countryCode);
+        auto neighbors = CountryNeighbors::getNeighborCountries(countryCode);
 
-        std::cout << "\nNeighboring countries of "
-                  << countryCode << ":\n";
+        std::string fullName = CountryNeighbors::getCountryFullName(countryCode);
+
+        std::cout << "\nNeighboring countries of "<< fullName << ":\n";
+
 
         if (neighbors.empty())
         {

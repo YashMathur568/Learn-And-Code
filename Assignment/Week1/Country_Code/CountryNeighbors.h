@@ -8,6 +8,7 @@ class CountryNeighbors
 {
 public:
     static std::vector<std::string> getNeighborCountries(const std::string& countryCode);
+    static std::string getCountryFullName(const std::string& countryCode);
 };
 
 #endif
