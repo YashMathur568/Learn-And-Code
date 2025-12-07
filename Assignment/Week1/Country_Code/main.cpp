@@ -84,7 +84,7 @@ int main()
 
         if (neighbors.empty())
         {
-            std::cout << " (No neighbor data available)\n";
+            std::cout << " No neighbor data available\n";
             continue;
         }
 
