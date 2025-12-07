@@ -6,7 +6,7 @@ bool hasExactlyTwoCharacters(const std::string& countryCode)
     return countryCode.length() == 2;
 }
 
-bool containsOnlyAlphabetLetters(const std::string& countryCode)
+bool isAlphabet(const std::string& countryCode)
 {
     for (char character : countryCode)
     {
@@ -22,7 +22,7 @@ bool containsOnlyAlphabetLetters(const std::string& countryCode)
     return true;
 }
 
-void convertLettersToUppercase(std::string& countryCode)
+void convertToUppercase(std::string& countryCode)
 {
     for (char& character : countryCode)
     {
@@ -33,7 +33,7 @@ void convertLettersToUppercase(std::string& countryCode)
     }
 }
 
-bool validateAndPrepareCountryCode(
+bool ValidateCountryCode(
     std::string& countryCode,
     std::string& errorMessage)
 {
@@ -43,13 +43,13 @@ bool validateAndPrepareCountryCode(
         return false;
     }
 
-    if (!containsOnlyAlphabetLetters(countryCode))
+    if (!isAlphabet(countryCode))
     {
         errorMessage = "Country code must contain alphabet letters only.";
         return false;
     }
 
-    convertLettersToUppercase(countryCode);
+    convertToUppercase(countryCode);
     return true;
 }
 
@@ -70,7 +70,7 @@ int main()
 
         std::string errorMessage;
 
-        if (!validateAndPrepareCountryCode(countryCode, errorMessage))
+        if (!ValidateCountryCode(countryCode, errorMessage))
         {
             std::cout << "Invalid input: " << errorMessage << std::endl;
             continue;
