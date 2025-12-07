@@ -1,75 +1,97 @@
 #include <iostream>
-#include <string>
-#include "CountryDirectory.h"
+#include "CountryNeighbors.h"
 
-bool isAlphabetOnly(const std::string& text)
+bool hasExactlyTwoCharacters(const std::string& countryCode)
 {
-    for (size_t characterIndex = 0; characterIndex < text.length(); ++characterIndex)
+    return countryCode.length() == 2;
+}
+
+bool containsOnlyAlphabetLetters(const std::string& countryCode)
+{
+    for (char character : countryCode)
     {
-        char currentCharacter = text[characterIndex];
-        if (!((currentCharacter >= 'A' && currentCharacter <= 'Z') ||
-              (currentCharacter >= 'a' && currentCharacter <= 'z')))
+        bool isUppercaseLetter = (character >= 'A' && character <= 'Z');
+        bool isLowercaseLetter = (character >= 'a' && character <= 'z');
+
+        if (!(isUppercaseLetter || isLowercaseLetter))
         {
             return false;
         }
     }
+
     return true;
 }
 
-void convertToUppercase(std::string& text)
+void convertLettersToUppercase(std::string& countryCode)
 {
-    for (size_t characterIndex = 0; characterIndex < text.length(); ++characterIndex)
+    for (char& character : countryCode)
     {
-        char currentCharacter = text[characterIndex];
-        if (currentCharacter >= 'a' && currentCharacter <= 'z')
+        if (character >= 'a' && character <= 'z')
         {
-            text[characterIndex] = currentCharacter - ('a' - 'A');
+            character = static_cast<char>(character - 'a' + 'A');
         }
     }
 }
 
+bool validateAndPrepareCountryCode(
+    std::string& countryCode,
+    std::string& errorMessage)
+{
+    if (!hasExactlyTwoCharacters(countryCode))
+    {
+        errorMessage = "Country code must contain exactly 2 letters.";
+        return false;
+    }
+
+    if (!containsOnlyAlphabetLetters(countryCode))
+    {
+        errorMessage = "Country code must contain alphabet letters only.";
+        return false;
+    }
+
+    convertLettersToUppercase(countryCode);
+    return true;
+}
+
 int main()
 {
-    CountryDirectory countryDirectory;
-    std::string inputCountryCode;
-
-    std::cout << "Country Lookup Program (Enter Q to quit)\n";
-
     while (true)
     {
-        std::cout << "\nEnter Country Code (Example: IN / US / NZ): ";
-        std::cin >> inputCountryCode;
+        std::string countryCode;
 
-        if (inputCountryCode == "Q" || inputCountryCode == "q")
+        std::cout << "\nEnter 2-letter country code (IN / US / NZ etc.) or type EXIT to quit: ";
+        std::cin >> countryCode;
+
+        if (countryCode == "EXIT" || countryCode == "exit")
         {
-            std::cout << "Exiting program !" << std::endl;
+            std::cout << "Exiting application.\n";
             break;
         }
 
-        if (inputCountryCode.length() != 2)
+        std::string errorMessage;
+
+        if (!validateAndPrepareCountryCode(countryCode, errorMessage))
         {
-            std::cout << "Error: Country code must be exactly 2 letters.";
+            std::cout << "Invalid input: " << errorMessage << std::endl;
             continue;
         }
 
-        if (!isAlphabetOnly(inputCountryCode))
+        auto neighbors =
+            CountryNeighbors::getNeighborCountries(countryCode);
+
+        std::cout << "\nNeighboring countries of "
+                  << countryCode << ":\n";
+
+        if (neighbors.empty())
         {
-            std::cout << "Error: Country code must contain only letters.";
+            std::cout << " (No neighbor data available)\n";
             continue;
         }
 
-        convertToUppercase(inputCountryCode);
-
-        if (!countryDirectory.isValidCountryCode(inputCountryCode))
+        for (const auto& neighbor : neighbors)
         {
-            std::cout << "Error: Country code not found in directory.";
-            continue;
+            std::cout << " - " << neighbor << std::endl;
         }
-
-        std::string countryName =
-            countryDirectory.getCountryName(inputCountryCode);
-
-        std::cout << "Country Name: " << countryName << std::endl;
     }
 
     return 0;
