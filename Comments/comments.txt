@@ -1,0 +1,131 @@
+| Comment                               | Location          | Type                           | Why it’s Bad                        |
+| ------------------------------------- | ----------------- | ------------------------------ | ----------------------------------- |
+| // This method processes an order     | ProcessOrder      | Redundant comment              | Method name already explains this   |
+| // Check if order is null             | null check        | Redundant                      | Code is self-explanatory            |
+| // Validate the order                 | validation call   | Redundant                      | Method name explains intent         |
+| // Check inventory                    | inventory check   | Redundant                      | Clear from method call              |
+| // If no inventory, return failure    | inventory failure | Redundant                      | Code states this                    |
+| // Reserve inventory                  | reserve call      | Redundant                      | Obvious                             |
+| // Process payment                    | payment call      | Redundant                      | Method name says it                 |
+| // Check if payment succeeded         | payment result    | Redundant                      | IsSuccessful is clear               |
+| // Update inventory                   | commit            | Redundant                      | Already Clear                               |
+| // Send confirmation email            | notification      | Redundant                      | Already Clear                               |
+| // Return success                     | return            | Redundant                      | Obvious                             |
+| // Payment failed, release inventory  | else block        | Redundant                      | Code explains                       |
+| // Something went wrong               | catch block       | Noise comment                  | Adds zero info                      |
+| // Log the error                      | logging           | Redundant                      | Console.WriteLine is explicit       |
+| // Throw it                           | throw             | Redundant                      | throw; is explicit                  |
+| // TODO: Fix this later               | validation        | Zombie / TODO comment          | No context, rots over time          |
+| // Added by John on 12/15/2023...     | CancelOrder       | Journal comment                | Version control already tracks this |
+| // John says we need to refund here   | refund logic      | Misleading / Authority comment | “John” is irrelevant                |
+| // This is important!!!               | SaveOrder         | Noise / Emotional comment      | Shouting ≠ clarity                  |
+| // Gets order by ID                   | method            | Redundant                      | Method name already says it         |
+| // Saves the order                    | method            | Redundant                      | Method name already says it                                |
+
+
+public class OrderProcessor
+{
+    private readonly IPaymentGateway paymentGateway;
+    private readonly IInventoryService inventoryService;
+    private readonly INotificationService notificationService;
+
+    public OrderProcessor(
+        IPaymentGateway paymentGateway,
+        IInventoryService inventoryService,
+        INotificationService notificationService)
+    {
+        this.paymentGateway = paymentGateway;
+        this.inventoryService = inventoryService;
+        this.notificationService = notificationService;
+    }
+
+    public async Task<OrderResult> ProcessOrder(Order order)
+    {
+        if (order == null)
+        {
+            throw new ArgumentNullException(nameof(order));
+        }
+
+        if (!IsOrderValid(order))
+        {
+            return OrderResult.Invalid("Order validation failed");
+        }
+
+        if (!await inventoryService.CheckAvailability(order.Items))
+        {
+            return OrderResult.Failed("Insufficient inventory");
+        }
+
+        await inventoryService.ReserveItems(order.Items);
+
+        try
+        {
+            PaymentResult paymentResult = await paymentGateway.ProcessPayment(
+                order.CustomerId,
+                order.TotalAmount,
+                order.PaymentMethod);
+
+            if (paymentResult.IsSuccessful)
+            {
+                await inventoryService.CommitReservation(order.Items);
+                await notificationService.SendOrderConfirmation(order);
+
+                return OrderResult.Success(paymentResult.TransactionId);
+            }
+
+            await inventoryService.ReleaseReservation(order.Items);
+            return OrderResult.Failed($"Payment failed: {paymentResult.ErrorMessage}");
+        }
+        catch
+        {
+            // Inventory must always be released if payment processing fails unexpectedly
+            await inventoryService.ReleaseReservation(order.Items);
+            throw;
+        }
+    }
+
+    private bool IsOrderValid(Order order)
+    {
+        return order.Items?.Count > 0 && order.TotalAmount > 0;
+    }
+
+    public async Task CancelOrder(string orderId)
+    {
+        Order order = await GetOrderById(orderId);
+
+        if (order.Status == OrderStatus.Paid)
+        {
+            await paymentGateway.RefundPayment(order.TransactionId);
+            await inventoryService.RestoreInventory(order.Items);
+        }
+
+        order.Status = OrderStatus.Cancelled;
+        await SaveOrder(order);
+    }
+
+    private async Task<Order> GetOrderById(string orderId)
+    {
+        return await Task.FromResult(new Order());
+    }
+
+    private async Task SaveOrder(Order order)
+    {
+        await Task.CompletedTask;
+    }
+}
+
+
+
+Reflection – Key Learnings
+
+Comments should not restate what the code already expresses clearly through naming and structure.
+
+Improving method and variable names often eliminates the need for explanatory comments.
+
+Most comments become noise when they describe what the code does instead of why it exists.
+
+Good comments are justified only when they capture business rules, invariants, or non-obvious decisions.
+
+Historical, emotional, and TODO-style comments quickly become misleading and should be avoided.
+
+Clean code minimizes comments by making intent self-evident rather than relying on explanations.
