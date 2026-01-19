@@ -8,6 +8,8 @@ import java.util.Map;
 public class PaymentProcessor {
 
     private static final BigDecimal MIN_AMOUNT = new BigDecimal("0.01");
+    private static final BigDecimal MAX_ALLOWED_AMOUNT = new BigDecimal("5000");
+
     private static final int MAX_RETRIES = 2;
     private static final String PAYMENT_SUCCESS = "Payment successful";
     private static final String PAYMENT_FAILED = "Payment failed";
@@ -61,7 +63,7 @@ public class PaymentProcessor {
     private void execute(PaymentRequest request) {
         logger.log("Executing payment of " + request.amount());
 
-        if (request.amount().compareTo(new BigDecimal("5000")) > 0) {
+        if (request.amount().compareTo(MAX_ALLOWED_AMOUNT) > 0) {
             throw new PaymentException("Limit exceeded");
         }
     }
