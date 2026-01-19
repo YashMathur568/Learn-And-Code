@@ -17,5 +17,5 @@ bool GuessValidator::isValidGuess(const std::string& input) const
 }
 
     int value = std::stoi(input);
-    return value >= 1 && value <= 100;
+    return value >= GuessValidator::MIN_RANDOM_NUMBER && value <= GuessValidator::MAX_RANDOM_NUMBER;
 }
