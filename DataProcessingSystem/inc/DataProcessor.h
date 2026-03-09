@@ -17,6 +17,8 @@ private:
     IExporter& exporter;
     ILogger& logger;
     IStatisticsCalculator& statistics;
+    
+    int errorCount;
 
 public:
     DataProcessor(IParser& parserReference,
@@ -28,6 +30,8 @@ public:
 
     void process(const std::string& inputFile,
                  const std::string& outputFile);
+
+    int getErrorCount() const;
 };
 
 #endif

@@ -10,6 +10,8 @@ void RecordTransformer::transform(std::vector<Record>& records)
         record.setName(uppercaseName);
 
         double currentValue = record.getValue();
-        record.setDerivedValues(currentValue * 2, currentValue * currentValue);
+        double doubledValue = currentValue * 2;
+        double squaredValue = currentValue * currentValue;
+        record.setDerivedValues(doubledValue, squaredValue);
     }
 }
