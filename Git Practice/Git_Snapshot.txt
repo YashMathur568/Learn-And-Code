@@ -1,0 +1,18 @@
+A snapshot is a complete record of all files and their contents at a specific point in time. It's like taking a photograph of your entire project.
+
+Each commit stores a snapshot of the entire project state.
+
+Why Not Just Store Differences?
+
+Some version control systems (like SVN) store differences (diffs):
+Commit 1: Full files
+Commit 2: Only changes from Commit 1
+Commit 3: Only changes from Commit 2
+Problem: To see Commit 3, you need to apply changes from 1→2→3.
+
+Git Stores Snapshots Instead
+Advantage:
+
+Quick checkout to any commit (just restore the snapshot)
+No need to replay changes
+Each snapshot is independent

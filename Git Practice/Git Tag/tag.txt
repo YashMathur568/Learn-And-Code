@@ -1,0 +1,16 @@
+# Create an annotated tag on the current commit
+git tag -a v1.0 -m "Release version 1.0"
+
+# Create an annotated tag on a specific commit
+git tag -a v2.0 19e6bd1 -m "Release 2.0: Comprehensive testing added"
+git tag -a v1.1 4b2fb7d -m "Release 1.1: Basic add function"
+git tag -a v1.2 1cad499 -m "Release 1.2: Subtract function added"
+
+# List all tags
+git tag -l
+
+# Show details of a specific tag
+git show v2.0
+
+# Push a single tag to remote
+git push origin v1.0
