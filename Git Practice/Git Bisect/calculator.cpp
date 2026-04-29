@@ -19,5 +19,11 @@ int divide(int a, int b) {
 
 int main() {
     std::cout << "Calculator Program" << std::endl;
+    
+    std::cout << "Add: " << add(5, 3) << std::endl;
+    std::cout << "Subtract: " << subtract(5, 3) << std::endl;
+    std::cout << "Multiply: " << multiply(5, 3) << std::endl;
+    std::cout << "Divide: " << divide(6, 3) << std::endl;
+    
     return 0;
 }
