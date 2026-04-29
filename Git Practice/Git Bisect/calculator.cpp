@@ -12,6 +12,11 @@ int multiply(int a, int b) {
     return a + b;
 }
 
+int divide(int a, int b) {
+    if (b == 0) return 0;
+    return a / b;
+}
+
 int main() {
     std::cout << "Calculator Program" << std::endl;
     return 0;
