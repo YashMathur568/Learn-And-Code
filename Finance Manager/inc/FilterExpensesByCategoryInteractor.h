@@ -5,8 +5,8 @@
 
 class FilterExpensesByCategoryInteractor : public IFilterExpensesByCategoryInteractor {
 public:
-    explicit FilterExpensesByCategoryInteractor(IExpenseRepository& expenseRepo);
+    explicit FilterExpensesByCategoryInteractor(IExpenseRepository& expenseRepository);
     std::vector<Expense> execute(int userId, Category category) override;
 private:
-    IExpenseRepository& expenseRepo;
+    IExpenseRepository& expenseRepository;
 };

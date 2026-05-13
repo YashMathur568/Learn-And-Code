@@ -6,9 +6,9 @@
 
 class TrackBudgetInteractor : public ITrackBudgetInteractor {
 public:
-    TrackBudgetInteractor(IBudgetRepository& budgetRepo, IExpenseRepository& expenseRepo);
+    TrackBudgetInteractor(IBudgetRepository& budgetRepository, IExpenseRepository& expenseRepository);
     BudgetStatus execute(int userId, Category category) override;
 private:
-    IBudgetRepository& budgetRepo;
-    IExpenseRepository& expenseRepo;
+    IBudgetRepository& budgetRepository;
+    IExpenseRepository& expenseRepository;
 };

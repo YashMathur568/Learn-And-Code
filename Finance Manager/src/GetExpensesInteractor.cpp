@@ -1,9 +1,8 @@
 #include "GetExpensesInteractor.h"
 
-GetExpensesInteractor::GetExpensesInteractor(IExpenseRepository& expenseRepo)
-    : expenseRepo(expenseRepo) {}
+GetExpensesInteractor::GetExpensesInteractor(IExpenseRepository& expenseRepository)
+    : expenseRepository(expenseRepository) {}
 
 std::vector<Expense> GetExpensesInteractor::execute(int userId) {
-    
     return {};
 }

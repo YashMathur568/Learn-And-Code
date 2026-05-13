@@ -1,9 +1,8 @@
 #include "TrackBudgetInteractor.h"
 
-TrackBudgetInteractor::TrackBudgetInteractor(IBudgetRepository& budgetRepo, IExpenseRepository& expenseRepo)
-    : budgetRepo(budgetRepo), expenseRepo(expenseRepo) {}
+TrackBudgetInteractor::TrackBudgetInteractor(IBudgetRepository& budgetRepository, IExpenseRepository& expenseRepository)
+    : budgetRepository(budgetRepository), expenseRepository(expenseRepository) {}
 
 BudgetStatus TrackBudgetInteractor::execute(int userId, Category category) {
-    
     return {};
 }

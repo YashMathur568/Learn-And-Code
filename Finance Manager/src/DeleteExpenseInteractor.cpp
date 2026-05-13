@@ -1,8 +1,7 @@
 #include "DeleteExpenseInteractor.h"
 
-DeleteExpenseInteractor::DeleteExpenseInteractor(IExpenseRepository& expenseRepo)
-    : expenseRepo(expenseRepo) {}
+DeleteExpenseInteractor::DeleteExpenseInteractor(IExpenseRepository& expenseRepository)
+    : expenseRepository(expenseRepository) {}
 
 void DeleteExpenseInteractor::execute(int id) {
-    
 }

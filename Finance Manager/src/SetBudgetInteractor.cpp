@@ -1,8 +1,7 @@
 #include "SetBudgetInteractor.h"
 
-SetBudgetInteractor::SetBudgetInteractor(IBudgetRepository& budgetRepo)
-    : budgetRepo(budgetRepo) {}
+SetBudgetInteractor::SetBudgetInteractor(IBudgetRepository& budgetRepository)
+    : budgetRepository(budgetRepository) {}
 
 void SetBudgetInteractor::execute(const Budget& budget) {
-    
 }

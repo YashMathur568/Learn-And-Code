@@ -5,8 +5,8 @@
 
 class LogoutInteractor : public ILogoutInteractor {
 public:
-    explicit LogoutInteractor(ISessionRepository& sessionRepo);
+    explicit LogoutInteractor(ISessionRepository& sessionRepository);
     void execute(const std::string& token) override;
 private:
-    ISessionRepository& sessionRepo;
+    ISessionRepository& sessionRepository;
 };

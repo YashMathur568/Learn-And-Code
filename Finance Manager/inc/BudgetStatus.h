@@ -2,7 +2,8 @@
 
 #include "Category.h"
 
-struct BudgetStatus {
+class BudgetStatus {
+public:
     Category category;
     double limitAmount;
     double spentAmount;

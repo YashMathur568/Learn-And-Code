@@ -12,4 +12,4 @@ file(GLOB SOURCES "src/*.cpp")
 
 add_executable(finance_manager main.cpp ${SOURCES})
 
-target_link_libraries(finance_manager SQLite3::SQLite3)
+target_link_libraries(finance_manager ${SQLite3_LIBRARIES})

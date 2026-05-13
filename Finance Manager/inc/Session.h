@@ -2,7 +2,8 @@
 
 #include <string>
 
-struct Session {
+class Session {
+public:
     int id;
     int userId;
     std::string token;

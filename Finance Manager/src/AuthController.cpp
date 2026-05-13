@@ -4,11 +4,11 @@ AuthController::AuthController(
     IRegisterInteractor& registerInteractor,
     ILoginInteractor& loginInteractor,
     ILogoutInteractor& logoutInteractor,
-    IInputHandler& input,
-    IOutputHandler& output)
+    IInputHandler& inputHandler,
+    IOutputHandler& outputHandler)
     : registerInteractor(registerInteractor), loginInteractor(loginInteractor),
-      logoutInteractor(logoutInteractor), input(input), output(output) {}
+      logoutInteractor(logoutInteractor), inputHandler(inputHandler), outputHandler(outputHandler) {}
 
-void AuthController::handleRegister()                        {  }
-std::string AuthController::handleLogin()                    {  return ""; }
-void AuthController::handleLogout(const std::string& token)  {  }
+void AuthController::handleRegister()                        {}
+std::string AuthController::handleLogin()                    { return ""; }
+void AuthController::handleLogout(const std::string& token)  {}

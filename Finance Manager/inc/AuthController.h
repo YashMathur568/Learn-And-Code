@@ -13,16 +13,16 @@ public:
         IRegisterInteractor& registerInteractor,
         ILoginInteractor& loginInteractor,
         ILogoutInteractor& logoutInteractor,
-        IInputHandler& input,
-        IOutputHandler& output
+        IInputHandler& inputHandler,
+        IOutputHandler& outputHandler
     );
     void handleRegister();
-    std::string handleLogin();           
+    std::string handleLogin();
     void handleLogout(const std::string& token);
 private:
     IRegisterInteractor& registerInteractor;
     ILoginInteractor& loginInteractor;
     ILogoutInteractor& logoutInteractor;
-    IInputHandler& input;
-    IOutputHandler& output;
+    IInputHandler& inputHandler;
+    IOutputHandler& outputHandler;
 };

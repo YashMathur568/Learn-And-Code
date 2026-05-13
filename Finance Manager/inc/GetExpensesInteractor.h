@@ -5,8 +5,8 @@
 
 class GetExpensesInteractor : public IGetExpensesInteractor {
 public:
-    explicit GetExpensesInteractor(IExpenseRepository& expenseRepo);
+    explicit GetExpensesInteractor(IExpenseRepository& expenseRepository);
     std::vector<Expense> execute(int userId) override;
 private:
-    IExpenseRepository& expenseRepo;
+    IExpenseRepository& expenseRepository;
 };

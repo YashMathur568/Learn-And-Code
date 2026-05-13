@@ -5,8 +5,8 @@
 
 class SetBudgetInteractor : public ISetBudgetInteractor {
 public:
-    explicit SetBudgetInteractor(IBudgetRepository& budgetRepo);
+    explicit SetBudgetInteractor(IBudgetRepository& budgetRepository);
     void execute(const Budget& budget) override;
 private:
-    IBudgetRepository& budgetRepo;
+    IBudgetRepository& budgetRepository;
 };

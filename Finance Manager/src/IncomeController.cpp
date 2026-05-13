@@ -3,9 +3,9 @@
 IncomeController::IncomeController(
     IAddIncomeInteractor& addInteractor,
     IGetIncomesInteractor& getInteractor,
-    IInputHandler& input,
-    IOutputHandler& output)
-    : addInteractor(addInteractor), getInteractor(getInteractor), input(input), output(output) {}
+    IInputHandler& inputHandler,
+    IOutputHandler& outputHandler)
+    : addInteractor(addInteractor), getInteractor(getInteractor), inputHandler(inputHandler), outputHandler(outputHandler) {}
 
-void IncomeController::handleAddIncome(int userId)   {  }
-void IncomeController::handleViewIncomes(int userId) {  }
+void IncomeController::handleAddIncome(int userId)   {}
+void IncomeController::handleViewIncomes(int userId) {}

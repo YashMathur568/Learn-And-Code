@@ -2,7 +2,8 @@
 
 #include <string>
 
-struct User {
+class User {
+public:
     int id;
     std::string username;
     std::string passwordHash;

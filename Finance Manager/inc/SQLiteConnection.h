@@ -7,11 +7,11 @@ class SQLiteConnection : public IDatabaseConnection {
 public:
     explicit SQLiteConnection(const std::string& dbPath);
     ~SQLiteConnection();
-    void execute(const std::string& sql) override;
-    ResultSet query(const std::string& sql) override;
+    void execute(const std::string& sqlStatement) override;
+    ResultSet query(const std::string& sqlStatement) override;
     void close() override;
     void initializeSchema();
 private:
-    std::string dbPath;
-    void* db;   
+    std::string databasePath;
+    void* databaseHandle;
 };

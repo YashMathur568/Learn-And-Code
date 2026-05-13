@@ -3,7 +3,8 @@
 #include <string>
 #include "Category.h"
 
-struct Expense {
+class Expense {
+public:
     int id;
     int userId;
     double amount;

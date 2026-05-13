@@ -1,34 +1,46 @@
 #include "AppFactory.h"
+#include "RegisterInteractor.h"
+#include "LoginInteractor.h"
+#include "LogoutInteractor.h"
+#include "ValidateTokenInteractor.h"
+#include "AddExpenseInteractor.h"
+#include "GetExpensesInteractor.h"
+#include "FilterExpensesByCategoryInteractor.h"
+#include "FilterExpensesByDateInteractor.h"
+#include "DeleteExpenseInteractor.h"
+#include "AddIncomeInteractor.h"
+#include "GetIncomesInteractor.h"
+#include "SetBudgetInteractor.h"
+#include "TrackBudgetInteractor.h"
+#include "GetSummaryInteractor.h"
 
-AppFactory::AppFactory(const std::string& dbPath)
-    : db(dbPath),
-      expenseRepo(db), incomeRepo(db), budgetRepo(db),
-      userRepo(db), sessionRepo(db) {}
+AppFactory::AppFactory(const std::string& databasePath)
+    : databaseConnection(databasePath),
+      expenseRepository(databaseConnection), incomeRepository(databaseConnection), budgetRepository(databaseConnection),
+      userRepository(databaseConnection), sessionRepository(databaseConnection) {}
 
 AuthController AppFactory::createAuthController() {
-    
     return AuthController(
-        *new RegisterInteractor(userRepo),
-        *new LoginInteractor(userRepo, sessionRepo),
-        *new LogoutInteractor(sessionRepo),
-        input, output
+        *new RegisterInteractor(userRepository),
+        *new LoginInteractor(userRepository, sessionRepository),
+        *new LogoutInteractor(sessionRepository),
+        inputHandler, outputHandler
     );
 }
 
 MainMenuController AppFactory::createMainMenuController() {
-    
     return MainMenuController(
         *new ExpenseController(
-            *new AddExpenseInteractor(expenseRepo),
-            *new GetExpensesInteractor(expenseRepo),
-            *new FilterExpensesByCategoryInteractor(expenseRepo),
-            *new FilterExpensesByDateInteractor(expenseRepo),
-            *new DeleteExpenseInteractor(expenseRepo),
-            input, output),
-        *new IncomeController(*new AddIncomeInteractor(incomeRepo), *new GetIncomesInteractor(incomeRepo), input, output),
-        *new BudgetController(*new SetBudgetInteractor(budgetRepo), *new TrackBudgetInteractor(budgetRepo, expenseRepo), input, output),
-        *new SummaryController(*new GetSummaryInteractor(incomeRepo, expenseRepo), output),
-        *new ValidateTokenInteractor(sessionRepo),
-        input, output
+            *new AddExpenseInteractor(expenseRepository),
+            *new GetExpensesInteractor(expenseRepository),
+            *new FilterExpensesByCategoryInteractor(expenseRepository),
+            *new FilterExpensesByDateInteractor(expenseRepository),
+            *new DeleteExpenseInteractor(expenseRepository),
+            inputHandler, outputHandler),
+        *new IncomeController(*new AddIncomeInteractor(incomeRepository), *new GetIncomesInteractor(incomeRepository), inputHandler, outputHandler),
+        *new BudgetController(*new SetBudgetInteractor(budgetRepository), *new TrackBudgetInteractor(budgetRepository, expenseRepository), inputHandler, outputHandler),
+        *new SummaryController(*new GetSummaryInteractor(incomeRepository, expenseRepository), outputHandler),
+        *new ValidateTokenInteractor(sessionRepository),
+        inputHandler, outputHandler
     );
 }

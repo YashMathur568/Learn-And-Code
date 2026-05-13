@@ -5,9 +5,9 @@
 
 class SQLiteIncomeRepository : public IIncomeRepository {
 public:
-    explicit SQLiteIncomeRepository(IDatabaseConnection& db);
+    explicit SQLiteIncomeRepository(IDatabaseConnection& databaseConnection);
     void add(const Income& income) override;
     std::vector<Income> findAll(int userId) override;
 private:
-    IDatabaseConnection& db;
+    IDatabaseConnection& databaseConnection;
 };

@@ -5,8 +5,8 @@
 
 class RegisterInteractor : public IRegisterInteractor {
 public:
-    explicit RegisterInteractor(IUserRepository& userRepo);
+    explicit RegisterInteractor(IUserRepository& userRepository);
     void execute(const std::string& username, const std::string& password) override;
 private:
-    IUserRepository& userRepo;
+    IUserRepository& userRepository;
 };

@@ -5,8 +5,8 @@
 
 class GetIncomesInteractor : public IGetIncomesInteractor {
 public:
-    explicit GetIncomesInteractor(IIncomeRepository& incomeRepo);
+    explicit GetIncomesInteractor(IIncomeRepository& incomeRepository);
     std::vector<Income> execute(int userId) override;
 private:
-    IIncomeRepository& incomeRepo;
+    IIncomeRepository& incomeRepository;
 };

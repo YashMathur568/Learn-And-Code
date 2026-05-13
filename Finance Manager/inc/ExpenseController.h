@@ -13,11 +13,11 @@ public:
     ExpenseController(
         IAddExpenseInteractor& addInteractor,
         IGetExpensesInteractor& getInteractor,
-        IFilterExpensesByCategoryInteractor& filterByCatInteractor,
+        IFilterExpensesByCategoryInteractor& filterByCategoryInteractor,
         IFilterExpensesByDateInteractor& filterByDateInteractor,
         IDeleteExpenseInteractor& deleteInteractor,
-        IInputHandler& input,
-        IOutputHandler& output
+        IInputHandler& inputHandler,
+        IOutputHandler& outputHandler
     );
     void handleAddExpense(int userId);
     void handleViewExpenses(int userId);
@@ -27,9 +27,9 @@ public:
 private:
     IAddExpenseInteractor& addInteractor;
     IGetExpensesInteractor& getInteractor;
-    IFilterExpensesByCategoryInteractor& filterByCatInteractor;
+    IFilterExpensesByCategoryInteractor& filterByCategoryInteractor;
     IFilterExpensesByDateInteractor& filterByDateInteractor;
     IDeleteExpenseInteractor& deleteInteractor;
-    IInputHandler& input;
-    IOutputHandler& output;
+    IInputHandler& inputHandler;
+    IOutputHandler& outputHandler;
 };

@@ -6,9 +6,9 @@
 
 class GetSummaryInteractor : public IGetSummaryInteractor {
 public:
-    GetSummaryInteractor(IIncomeRepository& incomeRepo, IExpenseRepository& expenseRepo);
+    GetSummaryInteractor(IIncomeRepository& incomeRepository, IExpenseRepository& expenseRepository);
     FinancialSummary execute(int userId) override;
 private:
-    IIncomeRepository& incomeRepo;
-    IExpenseRepository& expenseRepo;
+    IIncomeRepository& incomeRepository;
+    IExpenseRepository& expenseRepository;
 };

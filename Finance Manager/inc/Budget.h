@@ -3,7 +3,8 @@
 #include <string>
 #include "Category.h"
 
-struct Budget {
+class Budget {
+public:
     int id;
     int userId;
     Category category;

@@ -1,9 +1,8 @@
 #include "GetSummaryInteractor.h"
 
-GetSummaryInteractor::GetSummaryInteractor(IIncomeRepository& incomeRepo, IExpenseRepository& expenseRepo)
-    : incomeRepo(incomeRepo), expenseRepo(expenseRepo) {}
+GetSummaryInteractor::GetSummaryInteractor(IIncomeRepository& incomeRepository, IExpenseRepository& expenseRepository)
+    : incomeRepository(incomeRepository), expenseRepository(expenseRepository) {}
 
 FinancialSummary GetSummaryInteractor::execute(int userId) {
-    
     return {};
 }

@@ -1,8 +1,7 @@
 #include "AddIncomeInteractor.h"
 
-AddIncomeInteractor::AddIncomeInteractor(IIncomeRepository& incomeRepo)
-    : incomeRepo(incomeRepo) {}
+AddIncomeInteractor::AddIncomeInteractor(IIncomeRepository& incomeRepository)
+    : incomeRepository(incomeRepository) {}
 
 void AddIncomeInteractor::execute(const Income& income) {
-    
 }

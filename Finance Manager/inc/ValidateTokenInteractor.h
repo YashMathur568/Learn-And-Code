@@ -5,9 +5,8 @@
 
 class ValidateTokenInteractor : public IValidateTokenInteractor {
 public:
-    explicit ValidateTokenInteractor(ISessionRepository& sessionRepo);
-    
+    explicit ValidateTokenInteractor(ISessionRepository& sessionRepository);
     int execute(const std::string& token) override;
 private:
-    ISessionRepository& sessionRepo;
+    ISessionRepository& sessionRepository;
 };

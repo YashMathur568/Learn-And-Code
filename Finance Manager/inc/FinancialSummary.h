@@ -3,7 +3,8 @@
 #include <map>
 #include "Category.h"
 
-struct FinancialSummary {
+class FinancialSummary {
+public:
     double totalIncome;
     double totalExpenses;
     double balance;

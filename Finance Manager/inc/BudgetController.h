@@ -10,14 +10,14 @@ public:
     BudgetController(
         ISetBudgetInteractor& setInteractor,
         ITrackBudgetInteractor& trackInteractor,
-        IInputHandler& input,
-        IOutputHandler& output
+        IInputHandler& inputHandler,
+        IOutputHandler& outputHandler
     );
     void handleSetBudget(int userId);
     void handleTrackBudget(int userId);
 private:
     ISetBudgetInteractor& setInteractor;
     ITrackBudgetInteractor& trackInteractor;
-    IInputHandler& input;
-    IOutputHandler& output;
+    IInputHandler& inputHandler;
+    IOutputHandler& outputHandler;
 };

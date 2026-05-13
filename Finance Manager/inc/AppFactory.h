@@ -17,16 +17,16 @@
 
 class AppFactory {
 public:
-    explicit AppFactory(const std::string& dbPath);
+    explicit AppFactory(const std::string& databasePath);
     AuthController      createAuthController();
     MainMenuController  createMainMenuController();
 private:
-    SQLiteConnection            db;
-    ConsoleInputHandler         input;
-    ConsoleOutputHandler        output;
-    SQLiteExpenseRepository     expenseRepo;
-    SQLiteIncomeRepository      incomeRepo;
-    SQLiteBudgetRepository      budgetRepo;
-    SQLiteUserRepository        userRepo;
-    SQLiteSessionRepository     sessionRepo;
+    SQLiteConnection            databaseConnection;
+    ConsoleInputHandler         inputHandler;
+    ConsoleOutputHandler        outputHandler;
+    SQLiteExpenseRepository     expenseRepository;
+    SQLiteIncomeRepository      incomeRepository;
+    SQLiteBudgetRepository      budgetRepository;
+    SQLiteUserRepository        userRepository;
+    SQLiteSessionRepository     sessionRepository;
 };

@@ -3,6 +3,5 @@
 #include "MainMenuController.h"
 
 int main() {
-    
     return 0;
 }

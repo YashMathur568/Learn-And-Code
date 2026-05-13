@@ -10,14 +10,14 @@ public:
     IncomeController(
         IAddIncomeInteractor& addInteractor,
         IGetIncomesInteractor& getInteractor,
-        IInputHandler& input,
-        IOutputHandler& output
+        IInputHandler& inputHandler,
+        IOutputHandler& outputHandler
     );
     void handleAddIncome(int userId);
     void handleViewIncomes(int userId);
 private:
     IAddIncomeInteractor& addInteractor;
     IGetIncomesInteractor& getInteractor;
-    IInputHandler& input;
-    IOutputHandler& output;
+    IInputHandler& inputHandler;
+    IOutputHandler& outputHandler;
 };

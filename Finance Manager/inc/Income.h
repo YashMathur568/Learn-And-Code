@@ -2,7 +2,8 @@
 
 #include <string>
 
-struct Income {
+class Income {
+public:
     int id;
     int userId;
     double amount;

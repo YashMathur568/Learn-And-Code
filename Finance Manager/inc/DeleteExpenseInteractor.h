@@ -5,8 +5,8 @@
 
 class DeleteExpenseInteractor : public IDeleteExpenseInteractor {
 public:
-    explicit DeleteExpenseInteractor(IExpenseRepository& expenseRepo);
+    explicit DeleteExpenseInteractor(IExpenseRepository& expenseRepository);
     void execute(int id) override;
 private:
-    IExpenseRepository& expenseRepo;
+    IExpenseRepository& expenseRepository;
 };

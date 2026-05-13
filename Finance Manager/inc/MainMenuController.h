@@ -16,9 +16,9 @@ public:
         IncomeController& incomeController,
         BudgetController& budgetController,
         SummaryController& summaryController,
-        IValidateTokenInteractor& validateToken,
-        IInputHandler& input,
-        IOutputHandler& output
+        IValidateTokenInteractor& validateTokenInteractor,
+        IInputHandler& inputHandler,
+        IOutputHandler& outputHandler
     );
     void run(const std::string& token);
 private:
@@ -26,9 +26,9 @@ private:
     IncomeController& incomeController;
     BudgetController& budgetController;
     SummaryController& summaryController;
-    IValidateTokenInteractor& validateToken;
-    IInputHandler& input;
-    IOutputHandler& output;
+    IValidateTokenInteractor& validateTokenInteractor;
+    IInputHandler& inputHandler;
+    IOutputHandler& outputHandler;
     std::string sessionToken;
     int currentUserId;
 

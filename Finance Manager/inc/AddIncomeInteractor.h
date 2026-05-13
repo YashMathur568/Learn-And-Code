@@ -5,8 +5,8 @@
 
 class AddIncomeInteractor : public IAddIncomeInteractor {
 public:
-    explicit AddIncomeInteractor(IIncomeRepository& incomeRepo);
+    explicit AddIncomeInteractor(IIncomeRepository& incomeRepository);
     void execute(const Income& income) override;
 private:
-    IIncomeRepository& incomeRepo;
+    IIncomeRepository& incomeRepository;
 };
