@@ -4,4 +4,5 @@ DeleteExpenseInteractor::DeleteExpenseInteractor(IExpenseRepository& expenseRepo
     : expenseRepository(expenseRepository) {}
 
 void DeleteExpenseInteractor::execute(int id) {
+    expenseRepository.deleteById(id);
 }

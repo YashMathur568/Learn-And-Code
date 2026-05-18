@@ -4,5 +4,5 @@ GetExpensesInteractor::GetExpensesInteractor(IExpenseRepository& expenseReposito
     : expenseRepository(expenseRepository) {}
 
 std::vector<Expense> GetExpensesInteractor::execute(int userId) {
-    return {};
+    return expenseRepository.findAll(userId);
 }

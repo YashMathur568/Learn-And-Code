@@ -4,5 +4,5 @@ FilterExpensesByCategoryInteractor::FilterExpensesByCategoryInteractor(IExpenseR
     : expenseRepository(expenseRepository) {}
 
 std::vector<Expense> FilterExpensesByCategoryInteractor::execute(int userId, Category category) {
-    return {};
+    return expenseRepository.findByCategory(userId, category);
 }
