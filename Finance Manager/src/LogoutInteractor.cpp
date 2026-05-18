@@ -4,4 +4,5 @@ LogoutInteractor::LogoutInteractor(ISessionRepository& sessionRepository)
     : sessionRepository(sessionRepository) {}
 
 void LogoutInteractor::execute(const std::string& token) {
+    sessionRepository.deleteByToken(token);
 }
