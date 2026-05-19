@@ -19,6 +19,7 @@ public:
     void handleRegister();
     std::string handleLogin();
     void handleLogout(const std::string& token);
+    std::string run();
 private:
     IRegisterInteractor& registerInteractor;
     ILoginInteractor& loginInteractor;
