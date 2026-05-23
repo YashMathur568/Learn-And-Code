@@ -5,20 +5,17 @@
 SQLiteBudgetRepository::SQLiteBudgetRepository(IDatabaseConnection& databaseConnection) : databaseConnection(databaseConnection) {}
 
 void SQLiteBudgetRepository::save(const Budget& budget) {
-    std::string sqlStatement =
-        "INSERT OR REPLACE INTO budgets (user_id, category, limit_amount, month) VALUES ("
-        + std::to_string(budget.userId) + ", '"
-        + categoryToString(budget.category) + "', "
-        + std::to_string(budget.limitAmount) + ", '"
-        + budget.month + "');";
-    databaseConnection.execute(sqlStatement);
+    databaseConnection.executeParameterized(
+        "INSERT OR REPLACE INTO budgets (user_id, category, limit_amount, month) VALUES (?, ?, ?, ?);",
+        { budget.userId, categoryToString(budget.category), budget.limitAmount, budget.month }
+    );
 }
 
 Budget SQLiteBudgetRepository::findByCategory(int userId, Category category) {
-    std::string sqlStatement =
-        "SELECT id, user_id, category, limit_amount, month FROM budgets WHERE user_id = "
-        + std::to_string(userId) + " AND category = '" + categoryToString(category) + "';";
-    ResultSet rows = databaseConnection.query(sqlStatement);
+    ResultSet rows = databaseConnection.queryParameterized(
+        "SELECT id, user_id, category, limit_amount, month FROM budgets WHERE user_id = ? AND category = ?;",
+        { userId, categoryToString(category) }
+    );
     if (rows.empty())
         throw std::runtime_error("Budget not found for given category");
     const auto& row = rows[0];
@@ -32,10 +29,10 @@ Budget SQLiteBudgetRepository::findByCategory(int userId, Category category) {
 }
 
 std::vector<Budget> SQLiteBudgetRepository::findAll(int userId) {
-    std::string sqlStatement =
-        "SELECT id, user_id, category, limit_amount, month FROM budgets WHERE user_id = "
-        + std::to_string(userId) + ";";
-    ResultSet rows = databaseConnection.query(sqlStatement);
+    ResultSet rows = databaseConnection.queryParameterized(
+        "SELECT id, user_id, category, limit_amount, month FROM budgets WHERE user_id = ?;",
+        { userId }
+    );
     std::vector<Budget> budgets;
     for (const auto& row : rows) {
         Budget budget;

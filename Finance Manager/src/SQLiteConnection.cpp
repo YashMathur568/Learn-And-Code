@@ -40,6 +40,52 @@ ResultSet SQLiteConnection::query(const std::string& sqlStatement) {
     return results;
 }
 
+static void bindParams(sqlite3_stmt* statement, const std::vector<SqlParam>& params) {
+    for (int paramIndex = 0; paramIndex < static_cast<int>(params.size()); ++paramIndex) {
+        std::visit([&](auto&& value) {
+            using T = std::decay_t<decltype(value)>;
+            if constexpr (std::is_same_v<T, int>)
+                sqlite3_bind_int(statement, paramIndex + 1, value);
+            else if constexpr (std::is_same_v<T, double>)
+                sqlite3_bind_double(statement, paramIndex + 1, value);
+            else
+                sqlite3_bind_text(statement, paramIndex + 1, value.c_str(), -1, SQLITE_TRANSIENT);
+        }, params[paramIndex]);
+    }
+}
+
+void SQLiteConnection::executeParameterized(const std::string& sqlStatement, const std::vector<SqlParam>& params) {
+    sqlite3_stmt* preparedStatement = nullptr;
+    int resultCode = sqlite3_prepare_v2(reinterpret_cast<sqlite3*>(databaseHandle), sqlStatement.c_str(), -1, &preparedStatement, nullptr);
+    if (resultCode != SQLITE_OK)
+        throw std::runtime_error("SQL prepare error: " + std::string(sqlite3_errmsg(reinterpret_cast<sqlite3*>(databaseHandle))));
+    bindParams(preparedStatement, params);
+    resultCode = sqlite3_step(preparedStatement);
+    sqlite3_finalize(preparedStatement);
+    if (resultCode != SQLITE_DONE)
+        throw std::runtime_error("SQL execute error: " + std::string(sqlite3_errmsg(reinterpret_cast<sqlite3*>(databaseHandle))));
+}
+
+ResultSet SQLiteConnection::queryParameterized(const std::string& sqlStatement, const std::vector<SqlParam>& params) {
+    ResultSet results;
+    sqlite3_stmt* preparedStatement = nullptr;
+    int resultCode = sqlite3_prepare_v2(reinterpret_cast<sqlite3*>(databaseHandle), sqlStatement.c_str(), -1, &preparedStatement, nullptr);
+    if (resultCode != SQLITE_OK)
+        throw std::runtime_error("SQL prepare error: " + std::string(sqlite3_errmsg(reinterpret_cast<sqlite3*>(databaseHandle))));
+    bindParams(preparedStatement, params);
+    while (sqlite3_step(preparedStatement) == SQLITE_ROW) {
+        std::vector<std::string> row;
+        int columnCount = sqlite3_column_count(preparedStatement);
+        for (int columnIndex = 0; columnIndex < columnCount; ++columnIndex) {
+            const unsigned char* columnValue = sqlite3_column_text(preparedStatement, columnIndex);
+            row.push_back(columnValue ? reinterpret_cast<const char*>(columnValue) : "");
+        }
+        results.push_back(row);
+    }
+    sqlite3_finalize(preparedStatement);
+    return results;
+}
+
 void SQLiteConnection::close() {
     if (databaseHandle) {
         sqlite3_close(reinterpret_cast<sqlite3*>(databaseHandle));

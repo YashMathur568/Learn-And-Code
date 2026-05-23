@@ -3,21 +3,17 @@
 SQLiteIncomeRepository::SQLiteIncomeRepository(IDatabaseConnection& databaseConnection) : databaseConnection(databaseConnection) {}
 
 void SQLiteIncomeRepository::add(const Income& income) {
-    std::string sqlStatement =
-        "INSERT INTO income (user_id, amount, source, description, date) VALUES ("
-        + std::to_string(income.userId) + ", "
-        + std::to_string(income.amount) + ", '"
-        + income.source + "', '"
-        + income.description + "', '"
-        + income.date + "');";
-    databaseConnection.execute(sqlStatement);
+    databaseConnection.executeParameterized(
+        "INSERT INTO income (user_id, amount, source, description, date) VALUES (?, ?, ?, ?, ?);",
+        { income.userId, income.amount, income.source, income.description, income.date }
+    );
 }
 
 std::vector<Income> SQLiteIncomeRepository::findAll(int userId) {
-    std::string sqlStatement =
-        "SELECT id, user_id, amount, source, description, date FROM income WHERE user_id = "
-        + std::to_string(userId) + ";";
-    ResultSet rows = databaseConnection.query(sqlStatement);
+    ResultSet rows = databaseConnection.queryParameterized(
+        "SELECT id, user_id, amount, source, description, date FROM income WHERE user_id = ?;",
+        { userId }
+    );
     std::vector<Income> incomes;
     for (const auto& row : rows) {
         Income income;

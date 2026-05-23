@@ -5,21 +5,17 @@
 SQLiteExpenseRepository::SQLiteExpenseRepository(IDatabaseConnection& databaseConnection) : databaseConnection(databaseConnection) {}
 
 void SQLiteExpenseRepository::add(const Expense& expense) {
-    std::string sqlStatement =
-        "INSERT INTO expenses (user_id, amount, category, description, date) VALUES ("
-        + std::to_string(expense.userId) + ", "
-        + std::to_string(expense.amount) + ", '"
-        + categoryToString(expense.category) + "', '"
-        + expense.description + "', '"
-        + expense.date + "');";
-    databaseConnection.execute(sqlStatement);
+    databaseConnection.executeParameterized(
+        "INSERT INTO expenses (user_id, amount, category, description, date) VALUES (?, ?, ?, ?, ?);",
+        { expense.userId, expense.amount, categoryToString(expense.category), expense.description, expense.date }
+    );
 }
 
 std::vector<Expense> SQLiteExpenseRepository::findAll(int userId) {
-    std::string sqlStatement =
-        "SELECT id, user_id, amount, category, description, date FROM expenses WHERE user_id = "
-        + std::to_string(userId) + ";";
-    ResultSet rows = databaseConnection.query(sqlStatement);
+    ResultSet rows = databaseConnection.queryParameterized(
+        "SELECT id, user_id, amount, category, description, date FROM expenses WHERE user_id = ?;",
+        { userId }
+    );
     std::vector<Expense> expenses;
     for (const auto& row : rows) {
         Expense expense;
@@ -35,10 +31,10 @@ std::vector<Expense> SQLiteExpenseRepository::findAll(int userId) {
 }
 
 std::vector<Expense> SQLiteExpenseRepository::findByCategory(int userId, Category category) {
-    std::string sqlStatement =
-        "SELECT id, user_id, amount, category, description, date FROM expenses WHERE user_id = "
-        + std::to_string(userId) + " AND category = '" + categoryToString(category) + "';";
-    ResultSet rows = databaseConnection.query(sqlStatement);
+    ResultSet rows = databaseConnection.queryParameterized(
+        "SELECT id, user_id, amount, category, description, date FROM expenses WHERE user_id = ? AND category = ?;",
+        { userId, categoryToString(category) }
+    );
     std::vector<Expense> expenses;
     for (const auto& row : rows) {
         Expense expense;
@@ -54,10 +50,10 @@ std::vector<Expense> SQLiteExpenseRepository::findByCategory(int userId, Categor
 }
 
 std::vector<Expense> SQLiteExpenseRepository::findByDateRange(int userId, const std::string& from, const std::string& to) {
-    std::string sqlStatement =
-        "SELECT id, user_id, amount, category, description, date FROM expenses WHERE user_id = "
-        + std::to_string(userId) + " AND date >= '" + from + "' AND date <= '" + to + "';";
-    ResultSet rows = databaseConnection.query(sqlStatement);
+    ResultSet rows = databaseConnection.queryParameterized(
+        "SELECT id, user_id, amount, category, description, date FROM expenses WHERE user_id = ? AND date >= ? AND date <= ?;",
+        { userId, from, to }
+    );
     std::vector<Expense> expenses;
     for (const auto& row : rows) {
         Expense expense;
@@ -73,6 +69,8 @@ std::vector<Expense> SQLiteExpenseRepository::findByDateRange(int userId, const 
 }
 
 void SQLiteExpenseRepository::deleteById(int id) {
-    std::string sqlStatement = "DELETE FROM expenses WHERE id = " + std::to_string(id) + ";";
-    databaseConnection.execute(sqlStatement);
+    databaseConnection.executeParameterized(
+        "DELETE FROM expenses WHERE id = ?;",
+        { id }
+    );
 }

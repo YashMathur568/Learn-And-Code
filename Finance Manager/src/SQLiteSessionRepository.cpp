@@ -4,19 +4,17 @@
 SQLiteSessionRepository::SQLiteSessionRepository(IDatabaseConnection& databaseConnection) : databaseConnection(databaseConnection) {}
 
 void SQLiteSessionRepository::save(const Session& session) {
-    std::string sqlStatement =
-        "INSERT INTO sessions (user_id, token, expires_at) VALUES ("
-        + std::to_string(session.userId) + ", '"
-        + session.token + "', '"
-        + session.expiresAt + "');";
-    databaseConnection.execute(sqlStatement);
+    databaseConnection.executeParameterized(
+        "INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, ?);",
+        { session.userId, session.token, session.expiresAt }
+    );
 }
 
 Session SQLiteSessionRepository::findByToken(const std::string& token) {
-    std::string sqlStatement =
-        "SELECT id, user_id, token, expires_at FROM sessions WHERE token = '"
-        + token + "';";
-    ResultSet rows = databaseConnection.query(sqlStatement);
+    ResultSet rows = databaseConnection.queryParameterized(
+        "SELECT id, user_id, token, expires_at FROM sessions WHERE token = ?;",
+        { token }
+    );
     if (rows.empty())
         throw std::runtime_error("Session not found");
     const auto& row = rows[0];
@@ -29,11 +27,15 @@ Session SQLiteSessionRepository::findByToken(const std::string& token) {
 }
 
 void SQLiteSessionRepository::deleteByToken(const std::string& token) {
-    std::string sqlStatement = "DELETE FROM sessions WHERE token = '" + token + "';";
-    databaseConnection.execute(sqlStatement);
+    databaseConnection.executeParameterized(
+        "DELETE FROM sessions WHERE token = ?;",
+        { token }
+    );
 }
 
 void SQLiteSessionRepository::deleteByUserId(int userId) {
-    std::string sqlStatement = "DELETE FROM sessions WHERE user_id = " + std::to_string(userId) + ";";
-    databaseConnection.execute(sqlStatement);
+    databaseConnection.executeParameterized(
+        "DELETE FROM sessions WHERE user_id = ?;",
+        { userId }
+    );
 }

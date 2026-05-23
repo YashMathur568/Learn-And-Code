@@ -9,6 +9,8 @@ public:
     ~SQLiteConnection();
     void execute(const std::string& sqlStatement) override;
     ResultSet query(const std::string& sqlStatement) override;
+    void executeParameterized(const std::string& sqlStatement, const std::vector<SqlParam>& params) override;
+    ResultSet queryParameterized(const std::string& sqlStatement, const std::vector<SqlParam>& params) override;
     void close() override;
     void initializeSchema();
 private:
