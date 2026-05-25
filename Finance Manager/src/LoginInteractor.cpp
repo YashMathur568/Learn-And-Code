@@ -6,7 +6,16 @@ LoginInteractor::LoginInteractor(IUserRepository& userRepository, ISessionReposi
     : userRepository(userRepository), sessionRepository(sessionRepository) {}
 
 std::string LoginInteractor::execute(const std::string& username, const std::string& password) {
-    User user = userRepository.findByUsername(username);
+    if (username.empty())
+        throw std::runtime_error("Username cannot be empty");
+    if (password.empty())
+        throw std::runtime_error("Password cannot be empty");
+    User user;
+    try {
+        user = userRepository.findByUsername(username);
+    } catch (...) {
+        throw std::runtime_error("Invalid credentials");
+    }
     std::string computedHash = hashPassword(password, user.salt);
     if (computedHash != user.passwordHash)
         throw std::runtime_error("Invalid credentials");

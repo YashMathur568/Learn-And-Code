@@ -37,8 +37,12 @@ std::string AuthController::handleLogin() {
 }
 
 void AuthController::handleLogout(const std::string& token) {
-    logoutInteractor.execute(token);
-    outputHandler.print("Logged out successfully.");
+    try {
+        logoutInteractor.execute(token);
+        outputHandler.print("Logged out successfully.");
+    } catch (const std::exception& exception) {
+        outputHandler.printError(exception.what());
+    }
 }
 
 std::string AuthController::run() {
