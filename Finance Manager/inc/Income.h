@@ -4,7 +4,7 @@
 
 class Income {
 public:
-    int id;
+    int incomeId;
     int userId;
     double amount;
     std::string source;

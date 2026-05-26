@@ -19,7 +19,7 @@ User SQLiteUserRepository::findByUsername(const std::string& username) {
         throw std::runtime_error("User not found: " + username);
     const auto& row = rows[0];
     User user;
-    user.id           = std::stoi(row[0]);
+    user.userId       = std::stoi(row[0]);
     user.username     = row[1];
     user.passwordHash = row[2];
     user.salt         = row[3];

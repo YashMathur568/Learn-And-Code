@@ -4,13 +4,13 @@
 #include "../mocks/MockExpenseRepository.h"
 
 static Income makeIncome(int userId, double amount, const std::string& date) {
-    Income i; i.id = 0; i.userId = userId; i.amount = amount;
+    Income i; i.incomeId = 0; i.userId = userId; i.amount = amount;
     i.source = "Test"; i.description = "Test"; i.date = date;
     return i;
 }
 
 static Expense makeExpense(int userId, double amount, Category cat, const std::string& date) {
-    Expense e; e.id = 0; e.userId = userId; e.amount = amount;
+    Expense e; e.expenseId = 0; e.userId = userId; e.amount = amount;
     e.category = cat; e.description = "Test"; e.date = date;
     return e;
 }

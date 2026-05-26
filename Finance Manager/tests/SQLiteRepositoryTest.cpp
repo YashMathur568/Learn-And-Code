@@ -26,7 +26,7 @@ TEST_F(SQLiteRepoTest, UserSaveAndFindByUsername) {
     EXPECT_EQ(found.username,     "alice");
     EXPECT_EQ(found.passwordHash, user.passwordHash);
     EXPECT_EQ(found.salt,         "salt1");
-    EXPECT_GT(found.id, 0);
+    EXPECT_GT(found.userId, 0);
 }
 
 TEST_F(SQLiteRepoTest, UserExistsByUsername) {
@@ -141,7 +141,7 @@ TEST_F(SQLiteRepoTest, ExpenseDeleteById) {
     repo.add(e);
     auto before = repo.findAll(1);
     ASSERT_EQ(before.size(), 1u);
-    repo.deleteById(before[0].id);
+    repo.deleteById(before[0].expenseId);
     EXPECT_TRUE(repo.findAll(1).empty());
 }
 

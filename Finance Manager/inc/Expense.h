@@ -5,7 +5,7 @@
 
 class Expense {
 public:
-    int id;
+    int expenseId;
     int userId;
     double amount;
     Category category;

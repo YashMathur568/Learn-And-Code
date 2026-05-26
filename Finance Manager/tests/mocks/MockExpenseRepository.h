@@ -41,6 +41,6 @@ public:
         deleteByIdCalled = true;
         deletedId = id;
         expenses.erase(std::remove_if(expenses.begin(), expenses.end(),
-            [id](const Expense& e) { return e.id == id; }), expenses.end());
+            [id](const Expense& e) { return e.expenseId == id; }), expenses.end());
     }
 };

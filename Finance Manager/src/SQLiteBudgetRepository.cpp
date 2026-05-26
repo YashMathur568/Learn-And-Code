@@ -20,7 +20,7 @@ Budget SQLiteBudgetRepository::findByCategory(int userId, Category category, con
         throw std::runtime_error("Budget not found for given category and month");
     const auto& row = rows[0];
     Budget budget;
-    budget.id          = std::stoi(row[0]);
+    budget.budgetId    = std::stoi(row[0]);
     budget.userId      = std::stoi(row[1]);
     budget.category    = stringToCategory(row[2]);
     budget.limitAmount = std::stod(row[3]);
@@ -36,7 +36,7 @@ std::vector<Budget> SQLiteBudgetRepository::findAll(int userId) {
     std::vector<Budget> budgets;
     for (const auto& row : rows) {
         Budget budget;
-        budget.id          = std::stoi(row[0]);
+        budget.budgetId    = std::stoi(row[0]);
         budget.userId      = std::stoi(row[1]);
         budget.category    = stringToCategory(row[2]);
         budget.limitAmount = std::stod(row[3]);

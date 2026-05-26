@@ -21,7 +21,7 @@ static std::vector<std::vector<std::string>> expensesToRows(const std::vector<Ex
     std::vector<std::vector<std::string>> rows;
     for (const Expense& expense : expenses)
         rows.push_back({
-            std::to_string(expense.id),
+            std::to_string(expense.expenseId),
             formatAmount(expense.amount),
             categoryToString(expense.category),
             expense.description,

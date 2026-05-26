@@ -110,7 +110,7 @@ TEST(LoginInteractor, SessionTokenStoredInRepo) {
 
 TEST(LogoutInteractor, DeletesSessionByToken) {
     MockSessionRepository sessionRepo;
-    Session s; s.id = 1; s.userId = 1; s.token = "abc123"; s.expiresAt = "2099-01-01T00:00:00Z";
+    Session s; s.sessionId = 1; s.userId = 1; s.token = "abc123"; s.expiresAt = "2099-01-01T00:00:00Z";
     sessionRepo.sessions["abc123"] = s;
     LogoutInteractor interactor(sessionRepo);
     interactor.execute("abc123");
@@ -122,7 +122,7 @@ TEST(LogoutInteractor, DeletesSessionByToken) {
 
 TEST(ValidateTokenInteractor, ValidTokenReturnsUserId) {
     MockSessionRepository sessionRepo;
-    Session s; s.id = 1; s.userId = 42; s.token = "tok"; s.expiresAt = getExpiryTimestamp(24);
+    Session s; s.sessionId = 1; s.userId = 42; s.token = "tok"; s.expiresAt = getExpiryTimestamp(24);
     sessionRepo.sessions["tok"] = s;
     ValidateTokenInteractor interactor(sessionRepo);
     EXPECT_EQ(interactor.execute("tok"), 42);
@@ -136,7 +136,7 @@ TEST(ValidateTokenInteractor, UnknownTokenReturnsMinusOne) {
 
 TEST(ValidateTokenInteractor, ExpiredTokenReturnsMinusOne) {
     MockSessionRepository sessionRepo;
-    Session s; s.id = 1; s.userId = 5; s.token = "old"; s.expiresAt = "2000-01-01T00:00:00Z";
+    Session s; s.sessionId = 1; s.userId = 5; s.token = "old"; s.expiresAt = "2000-01-01T00:00:00Z";
     sessionRepo.sessions["old"] = s;
     ValidateTokenInteractor interactor(sessionRepo);
     EXPECT_EQ(interactor.execute("old"), -1);

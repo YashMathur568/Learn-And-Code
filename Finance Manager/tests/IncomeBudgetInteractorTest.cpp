@@ -10,14 +10,14 @@
 static Income makeIncome(int userId, double amount, const std::string& source,
                           const std::string& desc, const std::string& date) {
     Income i;
-    i.id = 0; i.userId = userId; i.amount = amount;
+    i.incomeId = 0; i.userId = userId; i.amount = amount;
     i.source = source; i.description = desc; i.date = date;
     return i;
 }
 
 static Budget makeBudget(int userId, Category cat, double limit, const std::string& month) {
     Budget b;
-    b.id = 0; b.userId = userId; b.category = cat;
+    b.budgetId = 0; b.userId = userId; b.category = cat;
     b.limitAmount = limit; b.month = month;
     return b;
 }
@@ -108,7 +108,7 @@ TEST(TrackBudgetInteractor, UnderBudgetIsNotExceeded) {
     MockBudgetRepository budgetRepo;
     MockExpenseRepository expenseRepo;
     budgetRepo.budgets.push_back(makeBudget(1, Category::FOOD, 3000.0, "2026-05"));
-    Expense e; e.id = 1; e.userId = 1; e.amount = 1000.0;
+    Expense e; e.expenseId = 1; e.userId = 1; e.amount = 1000.0;
     e.category = Category::FOOD; e.description = "Groceries"; e.date = "2026-05-10";
     expenseRepo.expenses.push_back(e);
     TrackBudgetInteractor interactor(budgetRepo, expenseRepo);
@@ -123,7 +123,7 @@ TEST(TrackBudgetInteractor, OverBudgetIsExceeded) {
     MockBudgetRepository budgetRepo;
     MockExpenseRepository expenseRepo;
     budgetRepo.budgets.push_back(makeBudget(1, Category::FOOD, 500.0, "2026-05"));
-    Expense e; e.id = 1; e.userId = 1; e.amount = 800.0;
+    Expense e; e.expenseId = 1; e.userId = 1; e.amount = 800.0;
     e.category = Category::FOOD; e.description = "Big shop"; e.date = "2026-05-10";
     expenseRepo.expenses.push_back(e);
     TrackBudgetInteractor interactor(budgetRepo, expenseRepo);
@@ -136,7 +136,7 @@ TEST(TrackBudgetInteractor, ExactlyAtLimitIsNotExceeded) {
     MockBudgetRepository budgetRepo;
     MockExpenseRepository expenseRepo;
     budgetRepo.budgets.push_back(makeBudget(1, Category::FOOD, 1000.0, "2026-05"));
-    Expense e; e.id = 1; e.userId = 1; e.amount = 1000.0;
+    Expense e; e.expenseId = 1; e.userId = 1; e.amount = 1000.0;
     e.category = Category::FOOD; e.description = "Exact"; e.date = "2026-05-10";
     expenseRepo.expenses.push_back(e);
     TrackBudgetInteractor interactor(budgetRepo, expenseRepo);
@@ -156,9 +156,9 @@ TEST(TrackBudgetInteractor, ExpensesFromOtherMonthsAreExcluded) {
     MockBudgetRepository budgetRepo;
     MockExpenseRepository expenseRepo;
     budgetRepo.budgets.push_back(makeBudget(1, Category::FOOD, 1000.0, "2026-05"));
-    Expense e1; e1.id = 1; e1.userId = 1; e1.amount = 400.0;
+    Expense e1; e1.expenseId = 1; e1.userId = 1; e1.amount = 400.0;
     e1.category = Category::FOOD; e1.description = "May";  e1.date = "2026-05-10";
-    Expense e2; e2.id = 2; e2.userId = 1; e2.amount = 900.0;
+    Expense e2; e2.expenseId = 2; e2.userId = 1; e2.amount = 900.0;
     e2.category = Category::FOOD; e2.description = "April"; e2.date = "2026-04-15";
     expenseRepo.expenses.push_back(e1);
     expenseRepo.expenses.push_back(e2);

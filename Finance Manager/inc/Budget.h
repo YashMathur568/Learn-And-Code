@@ -5,7 +5,7 @@
 
 class Budget {
 public:
-    int id;
+    int budgetId;
     int userId;
     Category category;
     double limitAmount;

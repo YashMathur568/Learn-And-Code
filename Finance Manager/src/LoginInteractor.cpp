@@ -21,7 +21,7 @@ std::string LoginInteractor::execute(const std::string& username, const std::str
         throw std::runtime_error("Invalid credentials");
     std::string token = generateSessionToken();
     Session newSession;
-    newSession.userId    = user.id;
+    newSession.userId    = user.userId;
     newSession.token     = token;
     newSession.expiresAt = getExpiryTimestamp(24);
     sessionRepository.save(newSession);

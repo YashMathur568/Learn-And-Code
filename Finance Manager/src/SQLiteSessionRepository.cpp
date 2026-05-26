@@ -19,7 +19,7 @@ Session SQLiteSessionRepository::findByToken(const std::string& token) {
         throw std::runtime_error("Session not found");
     const auto& row = rows[0];
     Session session;
-    session.id        = std::stoi(row[0]);
+    session.sessionId  = std::stoi(row[0]);
     session.userId    = std::stoi(row[1]);
     session.token     = row[2];
     session.expiresAt = row[3];

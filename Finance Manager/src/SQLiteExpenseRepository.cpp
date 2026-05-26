@@ -19,7 +19,7 @@ std::vector<Expense> SQLiteExpenseRepository::findAll(int userId) {
     std::vector<Expense> expenses;
     for (const auto& row : rows) {
         Expense expense;
-        expense.id          = std::stoi(row[0]);
+        expense.expenseId   = std::stoi(row[0]);
         expense.userId      = std::stoi(row[1]);
         expense.amount      = std::stod(row[2]);
         expense.category    = stringToCategory(row[3]);
@@ -38,7 +38,7 @@ std::vector<Expense> SQLiteExpenseRepository::findByCategory(int userId, Categor
     std::vector<Expense> expenses;
     for (const auto& row : rows) {
         Expense expense;
-        expense.id          = std::stoi(row[0]);
+        expense.expenseId   = std::stoi(row[0]);
         expense.userId      = std::stoi(row[1]);
         expense.amount      = std::stod(row[2]);
         expense.category    = stringToCategory(row[3]);
@@ -57,7 +57,7 @@ std::vector<Expense> SQLiteExpenseRepository::findByDateRange(int userId, const 
     std::vector<Expense> expenses;
     for (const auto& row : rows) {
         Expense expense;
-        expense.id          = std::stoi(row[0]);
+        expense.expenseId   = std::stoi(row[0]);
         expense.userId      = std::stoi(row[1]);
         expense.amount      = std::stod(row[2]);
         expense.category    = stringToCategory(row[3]);

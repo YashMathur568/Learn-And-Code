@@ -4,7 +4,7 @@
 
 class User {
 public:
-    int id;
+    int userId;
     std::string username;
     std::string passwordHash;
     std::string salt;

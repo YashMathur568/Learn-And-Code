@@ -4,7 +4,7 @@
 
 class Session {
 public:
-    int id;
+    int sessionId;
     int userId;
     std::string token;
     std::string expiresAt;

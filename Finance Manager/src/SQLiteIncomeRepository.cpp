@@ -17,7 +17,7 @@ std::vector<Income> SQLiteIncomeRepository::findAll(int userId) {
     std::vector<Income> incomes;
     for (const auto& row : rows) {
         Income income;
-        income.id          = std::stoi(row[0]);
+        income.incomeId     = std::stoi(row[0]);
         income.userId      = std::stoi(row[1]);
         income.amount      = std::stod(row[2]);
         income.source      = row[3];

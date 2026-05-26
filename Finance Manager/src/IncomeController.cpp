@@ -33,7 +33,7 @@ void IncomeController::handleViewIncomes(int userId) {
         std::vector<std::vector<std::string>> rows;
         for (const Income& income : incomes)
             rows.push_back({
-                std::to_string(income.id),
+                std::to_string(income.incomeId),
                 formatAmount(income.amount),
                 income.source,
                 income.description,

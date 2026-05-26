@@ -9,7 +9,7 @@
 static Expense makeExpense(int userId, double amount, Category cat,
                             const std::string& desc, const std::string& date, int id = 0) {
     Expense e;
-    e.id = id; e.userId = userId; e.amount = amount;
+    e.expenseId = id; e.userId = userId; e.amount = amount;
     e.category = cat; e.description = desc; e.date = date;
     return e;
 }
