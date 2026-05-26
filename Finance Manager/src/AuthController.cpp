@@ -13,7 +13,7 @@ AuthController::AuthController(
 void AuthController::handleRegister() {
     outputHandler.print("\n--- Register ---");
     std::string username = inputHandler.readString("Username: ");
-    std::string password = inputHandler.readString("Password: ");
+    std::string password = inputHandler.readPassword("Password: ");
     try {
         registerInteractor.execute(username, password);
         outputHandler.print("Registration successful. You can now log in.");
@@ -25,7 +25,7 @@ void AuthController::handleRegister() {
 std::string AuthController::handleLogin() {
     outputHandler.print("\n--- Login ---");
     std::string username = inputHandler.readString("Username: ");
-    std::string password = inputHandler.readString("Password: ");
+    std::string password = inputHandler.readPassword("Password: ");
     try {
         std::string token = loginInteractor.execute(username, password);
         outputHandler.print("Login successful. Welcome, " + username + "!");

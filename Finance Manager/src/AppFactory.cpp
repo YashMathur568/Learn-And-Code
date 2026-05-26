@@ -44,7 +44,7 @@ AppFactory::AppFactory(const std::string& databasePath)
     budgetController  = std::make_unique<BudgetController>(
         *setBudgetInteractor, *trackBudgetInteractor, inputHandler, outputHandler);
     summaryController = std::make_unique<SummaryController>(
-        *getSummaryInteractor, outputHandler);
+        *getSummaryInteractor, inputHandler, outputHandler);
 
     authController = std::make_unique<AuthController>(
         *registerInteractor, *loginInteractor, *logoutInteractor, inputHandler, outputHandler);

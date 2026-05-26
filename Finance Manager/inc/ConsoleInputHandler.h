@@ -8,4 +8,7 @@ public:
     double readDouble(const std::string& prompt) override;
     int readInt(const std::string& prompt) override;
     std::string readDate(const std::string& prompt) override;
+    std::string readPastDate(const std::string& prompt) override;
+    int readIntInRange(const std::string& prompt, int min, int max) override;
+    std::string readPassword(const std::string& prompt) override;
 };

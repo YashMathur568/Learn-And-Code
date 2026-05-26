@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string>
+#include <sstream>
+#include <iomanip>
 #include "Category.h"
 
 inline std::string categoryToString(Category category) {
@@ -23,4 +25,10 @@ inline Category stringToCategory(const std::string& value) {
     if (value == "HEALTH")        return Category::HEALTH;
     if (value == "EDUCATION")     return Category::EDUCATION;
     return Category::OTHER;
+}
+
+inline std::string formatAmount(double amount) {
+    std::ostringstream oss;
+    oss << "₹" << std::fixed << std::setprecision(2) << amount;
+    return oss.str();
 }

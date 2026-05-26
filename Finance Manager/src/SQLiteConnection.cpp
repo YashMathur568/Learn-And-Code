@@ -141,7 +141,8 @@ void SQLiteConnection::initializeSchema() {
         "category TEXT NOT NULL,"
         "limit_amount REAL NOT NULL,"
         "month TEXT NOT NULL,"
-        "FOREIGN KEY(user_id) REFERENCES users(id)"
+        "FOREIGN KEY(user_id) REFERENCES users(id),"
+        "UNIQUE(user_id, category, month)"
         ");"
     );
 }

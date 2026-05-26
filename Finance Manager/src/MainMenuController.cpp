@@ -97,9 +97,22 @@ void MainMenuController::routeSelection(int choice) {
             }
             break;
         }
-        case 4:
-            summaryController.handleShowSummary(currentUserId);
+        case 4: {
+            bool inSummaryMenu = true;
+            while (inSummaryMenu) {
+                outputHandler.print("\n-- Summary Menu --");
+                outputHandler.print("1. Monthly Summary");
+                outputHandler.print("2. Complete Summary");
+                outputHandler.print("3. Back");
+                int summaryChoice = inputHandler.readIntInRange("Select option: ", 1, 3);
+                switch (summaryChoice) {
+                    case 1: summaryController.handleShowMonthlySummary(currentUserId); break;
+                    case 2: summaryController.handleShowSummary(currentUserId);        break;
+                    default: inSummaryMenu = false; break;
+                }
+            }
             break;
+        }
         default:
             outputHandler.printError("Invalid option.");
             break;

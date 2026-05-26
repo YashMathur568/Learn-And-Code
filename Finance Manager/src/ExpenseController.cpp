@@ -4,7 +4,7 @@
 
 static Category promptCategory(IInputHandler& inputHandler, IOutputHandler& outputHandler) {
     outputHandler.print("Categories: 1=FOOD  2=TRANSPORT  3=UTILITIES  4=ENTERTAINMENT  5=HEALTH  6=EDUCATION  7=OTHER");
-    int choice = inputHandler.readInt("Select category: ");
+    int choice = inputHandler.readIntInRange("Select category: ", 1, 7);
     switch (choice) {
         case 1: return Category::FOOD;
         case 2: return Category::TRANSPORT;
@@ -12,6 +12,7 @@ static Category promptCategory(IInputHandler& inputHandler, IOutputHandler& outp
         case 4: return Category::ENTERTAINMENT;
         case 5: return Category::HEALTH;
         case 6: return Category::EDUCATION;
+        case 7: return Category::OTHER;
         default: return Category::OTHER;
     }
 }
@@ -21,7 +22,7 @@ static std::vector<std::vector<std::string>> expensesToRows(const std::vector<Ex
     for (const Expense& expense : expenses)
         rows.push_back({
             std::to_string(expense.id),
-            std::to_string(expense.amount),
+            formatAmount(expense.amount),
             categoryToString(expense.category),
             expense.description,
             expense.date
@@ -48,7 +49,7 @@ void ExpenseController::handleAddExpense(int userId) {
     expense.amount      = inputHandler.readDouble("Amount: ");
     expense.category    = promptCategory(inputHandler, outputHandler);
     expense.description = inputHandler.readString("Description: ");
-    expense.date        = inputHandler.readDate("Date (YYYY-MM-DD): ");
+    expense.date        = inputHandler.readPastDate("Date (YYYY-MM-DD): ");
     try {
         addInteractor.execute(expense);
         outputHandler.print("Expense added.");

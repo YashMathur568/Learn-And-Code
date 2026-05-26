@@ -1,4 +1,5 @@
 #include "IncomeController.h"
+#include "CategoryUtils.h"
 #include <stdexcept>
 
 IncomeController::IncomeController(
@@ -15,7 +16,7 @@ void IncomeController::handleAddIncome(int userId) {
     income.amount      = inputHandler.readDouble("Amount: ");
     income.source      = inputHandler.readString("Source: ");
     income.description = inputHandler.readString("Description: ");
-    income.date        = inputHandler.readDate("Date (YYYY-MM-DD): ");
+    income.date        = inputHandler.readPastDate("Date (YYYY-MM-DD): ");
     try {
         addInteractor.execute(income);
         outputHandler.print("Income added.");
@@ -33,7 +34,7 @@ void IncomeController::handleViewIncomes(int userId) {
         for (const Income& income : incomes)
             rows.push_back({
                 std::to_string(income.id),
-                std::to_string(income.amount),
+                formatAmount(income.amount),
                 income.source,
                 income.description,
                 income.date

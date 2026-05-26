@@ -45,12 +45,11 @@ void ConsoleOutputHandler::printTable(const std::vector<std::string>& headers, c
 
 void ConsoleOutputHandler::printSummary(const FinancialSummary& summary) {
     std::cout << "\n=== Financial Summary ===\n";
-    std::cout << std::fixed << std::setprecision(2);
-    std::cout << "Total Income:   " << summary.totalIncome   << "\n";
-    std::cout << "Total Expenses: " << summary.totalExpenses << "\n";
-    std::cout << "Balance:        " << summary.balance       << "\n";
+    std::cout << "Total Income:   " << formatAmount(summary.totalIncome)   << "\n";
+    std::cout << "Total Expenses: " << formatAmount(summary.totalExpenses) << "\n";
+    std::cout << "Balance:        " << formatAmount(summary.balance)       << "\n";
     std::cout << "\nExpenses by Category:\n";
     for (const auto& entry : summary.categoryBreakdown)
-        std::cout << "  " << std::left << std::setw(15) << categoryToString(entry.first) << entry.second << "\n";
+        std::cout << "  " << std::left << std::setw(15) << categoryToString(entry.first) << formatAmount(entry.second) << "\n";
     std::cout << "=========================\n";
 }

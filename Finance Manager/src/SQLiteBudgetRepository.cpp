@@ -11,13 +11,13 @@ void SQLiteBudgetRepository::save(const Budget& budget) {
     );
 }
 
-Budget SQLiteBudgetRepository::findByCategory(int userId, Category category) {
+Budget SQLiteBudgetRepository::findByCategory(int userId, Category category, const std::string& month) {
     ResultSet rows = databaseConnection.queryParameterized(
-        "SELECT id, user_id, category, limit_amount, month FROM budgets WHERE user_id = ? AND category = ?;",
-        { userId, categoryToString(category) }
+        "SELECT id, user_id, category, limit_amount, month FROM budgets WHERE user_id = ? AND category = ? AND month = ?;",
+        { userId, categoryToString(category), month }
     );
     if (rows.empty())
-        throw std::runtime_error("Budget not found for given category");
+        throw std::runtime_error("Budget not found for given category and month");
     const auto& row = rows[0];
     Budget budget;
     budget.id          = std::stoi(row[0]);
