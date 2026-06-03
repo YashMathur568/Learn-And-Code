@@ -57,4 +57,5 @@ target_link_libraries(prm-server
         OpenSSL::Crypto
         ${MYSQL_CPPCONN_LIBRARY}
         jwt-cpp::jwt-cpp
+        crypt
 )

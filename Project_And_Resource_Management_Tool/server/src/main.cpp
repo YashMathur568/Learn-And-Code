@@ -7,6 +7,8 @@
 #include "utils/ConfigLoader.hpp"
 #include "utils/DatabasePool.hpp"
 #include "utils/AppException.hpp"
+#include "controllers/AuthController.hpp"
+#include "security/JwtMiddleware.hpp"
 
 int main() {
     try {
