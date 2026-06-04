@@ -22,15 +22,17 @@ CREATE TABLE users (
 CREATE TABLE employees (
     employee_id  INT           NOT NULL AUTO_INCREMENT,
     user_id      INT           NOT NULL,
+    manager_id   INT           NULL,
     full_name    VARCHAR(100)  NOT NULL,
     email        VARCHAR(100)  NOT NULL,
     department   VARCHAR(100)  NOT NULL,
     designation  VARCHAR(100)  NOT NULL,
     status       ENUM('BENCH', 'ALLOCATED') NOT NULL DEFAULT 'BENCH',
     is_active    TINYINT(1)    NOT NULL DEFAULT 1,
-    CONSTRAINT pk_employees        PRIMARY KEY (employee_id),
-    CONSTRAINT uq_employees_user   UNIQUE (user_id),
-    CONSTRAINT fk_employees_users  FOREIGN KEY (user_id) REFERENCES users (user_id)
+    CONSTRAINT pk_employees         PRIMARY KEY (employee_id),
+    CONSTRAINT uq_employees_user    UNIQUE (user_id),
+    CONSTRAINT fk_employees_users   FOREIGN KEY (user_id)    REFERENCES users      (user_id),
+    CONSTRAINT fk_employees_manager FOREIGN KEY (manager_id) REFERENCES employees  (employee_id)
 );
 
 CREATE TABLE employee_skills (

@@ -1,5 +1,6 @@
 #include "AuthController.hpp"
 #include "../repositories/MySQLUserRepository.hpp"
+#include "../repositories/MySQLEmployeeRepository.hpp"
 #include "../security/RoleGuard.hpp"
 #include "../utils/AppException.hpp"
 #include "../utils/ResponseBuilder.hpp"
@@ -9,7 +10,8 @@
 
 AuthController::AuthController()
     : authService(std::make_shared<AuthService>(
-          std::make_shared<MySQLUserRepository>()
+          std::make_shared<MySQLUserRepository>(),
+          std::make_shared<MySQLEmployeeRepository>()
       )) {}
 
 void AuthController::login(

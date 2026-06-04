@@ -1,13 +1,16 @@
 #include "AuthService.hpp"
 #include "../security/JwtUtil.hpp"
 #include "../security/PasswordUtil.hpp"
-#include "../repositories/MySQLUserRepository.hpp"
 #include "../utils/AppException.hpp"
 
 #include <memory>
 
-AuthService::AuthService(std::shared_ptr<IUserRepository> userRepository)
-    : userRepository(std::move(userRepository)) {}
+AuthService::AuthService(
+    std::shared_ptr<IUserRepository>     userRepository,
+    std::shared_ptr<IEmployeeRepository> employeeRepository
+)
+    : userRepository(std::move(userRepository))
+    , employeeRepository(std::move(employeeRepository)) {}
 
 LoginResponse AuthService::login(const LoginRequest& request) {
     auto optionalUser = userRepository->findByUsername(request.username);
@@ -27,6 +30,12 @@ LoginResponse AuthService::login(const LoginRequest& request) {
     }
 
     int resolvedEmployeeId = 0;
+    if (user.role != "ADMIN") {
+        auto optionalEmployee = employeeRepository->findByUserId(user.userId);
+        if (optionalEmployee.has_value()) {
+            resolvedEmployeeId = optionalEmployee->employeeId;
+        }
+    }
 
     const std::string token = JwtUtil::generate(user.userId, user.role, resolvedEmployeeId);
 

@@ -8,6 +8,10 @@
 #include "utils/DatabasePool.hpp"
 #include "utils/AppException.hpp"
 #include "controllers/AuthController.hpp"
+#include "controllers/UserController.hpp"
+#include "controllers/EmployeeController.hpp"
+#include "controllers/ProjectController.hpp"
+#include "controllers/ConfigController.hpp"
 #include "security/JwtMiddleware.hpp"
 
 int main() {

@@ -59,3 +59,6 @@ target_link_libraries(prm-server
         jwt-cpp::jwt-cpp
         crypt
 )
+
+# Copy config.json to the build/server directory automatically
+file(COPY "${CMAKE_SOURCE_DIR}/config.json" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
