@@ -2,11 +2,18 @@
 
 #include "../dto/AdminDtos.hpp"
 #include "../models/User.hpp"
+#include "../models/Employee.hpp"
 #include "../repositories/IUserRepository.hpp"
 #include "../repositories/IEmployeeRepository.hpp"
 
 #include <memory>
+#include <optional>
 #include <vector>
+
+struct CreatedUserResult {
+    User                    user;
+    std::optional<Employee> employee;
+};
 
 class UserService {
 public:
@@ -15,7 +22,7 @@ public:
         std::shared_ptr<IEmployeeRepository> employeeRepository
     );
 
-    int               createUser(const CreateUserRequest& request);
+    CreatedUserResult createUser(const CreateUserRequest& request);
     std::vector<User> getAllUsers();
     void              deactivateUser(int userId);
     void              reactivateUser(int userId);

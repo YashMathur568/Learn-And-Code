@@ -16,13 +16,15 @@ public:
         std::shared_ptr<IMilestoneRepository> milestoneRepository
     );
 
-    int                    createProject(const CreateProjectRequest& request);
+    Project                createProject(const CreateProjectRequest& request);
     std::vector<Project>   getAllProjects();
-    void                   updateProject(int projectId, const UpdateProjectRequest& request);
+    std::vector<Project>   getProjectsByManagerId(int managerId);
+    Project                getProjectById(int projectId);
+    Project                updateProject(int projectId, const UpdateProjectRequest& request);
 
-    int                    createMilestone(int projectId, const CreateMilestoneRequest& request);
+    std::vector<Milestone> createMilestone(int projectId, const CreateMilestoneRequest& request);
     std::vector<Milestone> getMilestones(int projectId);
-    void                   updateMilestone(int projectId, int milestoneId,
+    std::vector<Milestone> updateMilestone(int projectId, int milestoneId,
                                            const UpdateMilestoneRequest& request);
 
 private:

@@ -33,7 +33,7 @@ void ProjectService::validateMilestoneStatus(const std::string& status) const {
     }
 }
 
-int ProjectService::createProject(const CreateProjectRequest& request) {
+Project ProjectService::createProject(const CreateProjectRequest& request) {
     if (request.name.empty() || request.startDate.empty() || request.endDate.empty()) {
         throw ValidationException("name, startDate, and endDate are required.");
     }
@@ -59,14 +59,27 @@ int ProjectService::createProject(const CreateProjectRequest& request) {
     project.status      = request.status;
     project.managerId   = request.managerId;
 
-    return projectRepository->create(project);
+    const int newProjectId = projectRepository->create(project);
+    return projectRepository->findById(newProjectId).value();
 }
 
 std::vector<Project> ProjectService::getAllProjects() {
     return projectRepository->findAll();
 }
 
-void ProjectService::updateProject(int projectId, const UpdateProjectRequest& request) {
+std::vector<Project> ProjectService::getProjectsByManagerId(int managerId) {
+    return projectRepository->findByManagerId(managerId);
+}
+
+Project ProjectService::getProjectById(int projectId) {
+    auto optionalProject = projectRepository->findById(projectId);
+    if (!optionalProject.has_value()) {
+        throw NotFoundException("Project with ID " + std::to_string(projectId) + " not found.");
+    }
+    return optionalProject.value();
+}
+
+Project ProjectService::updateProject(int projectId, const UpdateProjectRequest& request) {
     auto optionalProject = projectRepository->findById(projectId);
     if (!optionalProject.has_value()) {
         throw NotFoundException("Project with ID " + std::to_string(projectId) + " not found.");
@@ -97,9 +110,10 @@ void ProjectService::updateProject(int projectId, const UpdateProjectRequest& re
     updated.managerId      = request.managerId;
 
     projectRepository->update(updated);
+    return projectRepository->findById(projectId).value();
 }
 
-int ProjectService::createMilestone(int projectId, const CreateMilestoneRequest& request) {
+std::vector<Milestone> ProjectService::createMilestone(int projectId, const CreateMilestoneRequest& request) {
     auto optionalProject = projectRepository->findById(projectId);
     if (!optionalProject.has_value()) {
         throw NotFoundException("Project with ID " + std::to_string(projectId) + " not found.");
@@ -117,7 +131,8 @@ int ProjectService::createMilestone(int projectId, const CreateMilestoneRequest&
     milestone.dueDate   = request.dueDate;
     milestone.status    = request.status;
 
-    return milestoneRepository->create(milestone);
+    milestoneRepository->create(milestone);
+    return milestoneRepository->findByProjectId(projectId);
 }
 
 std::vector<Milestone> ProjectService::getMilestones(int projectId) {
@@ -128,7 +143,7 @@ std::vector<Milestone> ProjectService::getMilestones(int projectId) {
     return milestoneRepository->findByProjectId(projectId);
 }
 
-void ProjectService::updateMilestone(
+std::vector<Milestone> ProjectService::updateMilestone(
     int projectId,
     int milestoneId,
     const UpdateMilestoneRequest& request
@@ -151,4 +166,5 @@ void ProjectService::updateMilestone(
     updated.status      = request.status;
 
     milestoneRepository->update(updated);
+    return milestoneRepository->findByProjectId(projectId);
 }

@@ -1,5 +1,6 @@
 #include "JwtMiddleware.hpp"
 #include "JwtUtil.hpp"
+#include "TokenBlacklist.hpp"
 #include "../utils/ResponseBuilder.hpp"
 #include "../utils/AppException.hpp"
 
@@ -29,6 +30,14 @@ void JwtMiddleware::doFilter(
 
     try {
         TokenClaims claims = JwtUtil::verify(token);
+
+        if (TokenBlacklist::getInstance().contains(token)) {
+            failCallback(ResponseBuilder::error(
+                "Token has been invalidated. Please log in again.",
+                drogon::k401Unauthorized
+            ));
+            return;
+        }
 
         auto claimsPtr = std::make_shared<TokenClaims>(claims);
         request->getAttributes()->insert(CLAIMS_ATTRIBUTE_KEY, claimsPtr);

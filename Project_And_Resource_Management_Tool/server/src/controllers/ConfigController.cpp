@@ -44,10 +44,13 @@ void ConfigController::updateConfig(
         RoleGuard::requireRole(request, "ADMIN");
 
         const auto jsonBody = nlohmann::json::parse(request->getBody());
-        const std::string configValue = jsonBody.at("configValue").get<std::string>();
+        const std::string configValue = jsonBody.at("value").get<std::string>();
 
         configService->updateConfig(configKey, configValue);
-        callback(ResponseBuilder::success({{"message", "Config updated successfully."}}));
+        callback(ResponseBuilder::success({
+            {"configKey",   configKey},
+            {"configValue", configValue}
+        }));
 
     } catch (const UnauthorizedException& ex) {
         callback(ResponseBuilder::error(ex.what(), drogon::k403Forbidden));

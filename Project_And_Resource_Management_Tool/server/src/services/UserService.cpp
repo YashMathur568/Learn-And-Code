@@ -25,7 +25,7 @@ void UserService::validateRole(const std::string& role) const {
     }
 }
 
-int UserService::createUser(const CreateUserRequest& request) {
+CreatedUserResult UserService::createUser(const CreateUserRequest& request) {
     if (request.fullName.empty() || request.email.empty() ||
         request.username.empty() || request.tempPassword.empty()) {
         throw ValidationException("fullName, email, username, and tempPassword are required.");
@@ -58,6 +58,11 @@ int UserService::createUser(const CreateUserRequest& request) {
 
     const int newUserId = userRepository->create(newUser);
 
+    const auto createdUser = userRepository->findById(newUserId).value();
+
+    CreatedUserResult result;
+    result.user = createdUser;
+
     if (request.role != "ADMIN") {
         Employee employeeProfile;
         employeeProfile.userId      = newUserId;
@@ -66,9 +71,10 @@ int UserService::createUser(const CreateUserRequest& request) {
         employeeProfile.department  = request.department;
         employeeProfile.designation = request.designation;
         employeeRepository->create(employeeProfile);
+        result.employee = employeeRepository->findByUserId(newUserId);
     }
 
-    return newUserId;
+    return result;
 }
 
 std::vector<User> UserService::getAllUsers() {

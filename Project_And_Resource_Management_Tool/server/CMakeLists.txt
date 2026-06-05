@@ -62,3 +62,6 @@ target_link_libraries(prm-server
 
 # Copy config.json to the build/server directory automatically
 file(COPY "${CMAKE_SOURCE_DIR}/config.json" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+
+# Create logs directory for Drogon
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/logs")

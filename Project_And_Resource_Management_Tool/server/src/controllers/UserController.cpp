@@ -44,9 +44,13 @@ void UserController::createUser(
         const auto jsonBody     = nlohmann::json::parse(request->getBody());
         const auto createRequest = CreateUserRequest::fromJson(jsonBody);
 
-        const int newUserId = userService->createUser(createRequest);
+        const CreatedUserResult result = userService->createUser(createRequest);
 
-        callback(ResponseBuilder::success({{"userId", newUserId}}, drogon::k201Created));
+        nlohmann::json responseData = userToJson(result.user);
+        if (result.employee.has_value()) {
+            responseData["employee"] = employeeToJson(result.employee.value());
+        }
+        callback(ResponseBuilder::success(responseData, drogon::k201Created));
 
     } catch (const UnauthorizedException& ex) {
         callback(ResponseBuilder::error(ex.what(), drogon::k403Forbidden));

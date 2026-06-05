@@ -2,6 +2,8 @@
 #include "../repositories/MySQLEmployeeRepository.hpp"
 #include "../repositories/MySQLUserRepository.hpp"
 #include "../repositories/MySQLSkillRepository.hpp"
+#include "../repositories/MySQLAllocationRepository.hpp"
+#include "../dto/AllocationDtos.hpp"
 #include "../security/RoleGuard.hpp"
 #include "../utils/AppException.hpp"
 #include "../utils/ResponseBuilder.hpp"
@@ -12,7 +14,8 @@ EmployeeController::EmployeeController()
     : employeeService(std::make_shared<EmployeeService>(
           std::make_shared<MySQLEmployeeRepository>(),
           std::make_shared<MySQLUserRepository>(),
-          std::make_shared<MySQLSkillRepository>()
+          std::make_shared<MySQLSkillRepository>(),
+          std::make_shared<MySQLAllocationRepository>()
       )) {}
 
 void EmployeeController::getAllEmployees(
@@ -47,8 +50,8 @@ void EmployeeController::updateEmployee(
         const auto jsonBody      = nlohmann::json::parse(request->getBody());
         const auto updateRequest = UpdateEmployeeRequest::fromJson(jsonBody);
 
-        employeeService->updateEmployee(employeeId, updateRequest);
-        callback(ResponseBuilder::success({{"message", "Employee updated successfully."}}));
+        const Employee updatedEmployee = employeeService->updateEmployee(employeeId, updateRequest);
+        callback(ResponseBuilder::success(employeeToJson(updatedEmployee)));
 
     } catch (const UnauthorizedException& ex) {
         callback(ResponseBuilder::error(ex.what(), drogon::k403Forbidden));
@@ -71,8 +74,16 @@ void EmployeeController::deactivateEmployee(
     try {
         RoleGuard::requireRole(request, "ADMIN");
 
-        employeeService->deactivateEmployee(employeeId);
-        callback(ResponseBuilder::success({{"message", "Employee deactivated successfully."}}));
+        const std::vector<Allocation> endedAllocations = employeeService->deactivateEmployee(employeeId);
+
+        nlohmann::json endedArray = nlohmann::json::array();
+        for (const auto& allocation : endedAllocations) {
+            endedArray.push_back(allocationToJson(allocation));
+        }
+        callback(ResponseBuilder::success({
+            {"message",          "Employee deactivated successfully."},
+            {"endedAllocations", endedArray}
+        }));
 
     } catch (const UnauthorizedException& ex) {
         callback(ResponseBuilder::error(ex.what(), drogon::k403Forbidden));
@@ -147,8 +158,8 @@ void EmployeeController::addSkill(
         const auto jsonBody     = nlohmann::json::parse(request->getBody());
         const auto skillRequest = SkillRequest::fromJson(jsonBody);
 
-        const int newSkillId = employeeService->addSkill(employeeId, skillRequest);
-        callback(ResponseBuilder::success({{"skillId", newSkillId}}, drogon::k201Created));
+        const EmployeeSkill newSkill = employeeService->addSkill(employeeId, skillRequest);
+        callback(ResponseBuilder::success(skillToJson(newSkill), drogon::k201Created));
 
     } catch (const UnauthorizedException& ex) {
         callback(ResponseBuilder::error(ex.what(), drogon::k403Forbidden));
@@ -176,7 +187,11 @@ void EmployeeController::updateSkill(
         const auto skillRequest = SkillRequest::fromJson(jsonBody);
 
         employeeService->updateSkill(employeeId, skillId, skillRequest);
-        callback(ResponseBuilder::success({{"message", "Skill updated successfully."}}));
+
+        const auto updatedSkills = employeeService->getSkills(employeeId);
+        nlohmann::json dataArray = nlohmann::json::array();
+        for (const auto& skill : updatedSkills) { dataArray.push_back(skillToJson(skill)); }
+        callback(ResponseBuilder::success({{"data", dataArray}}));
 
     } catch (const UnauthorizedException& ex) {
         callback(ResponseBuilder::error(ex.what(), drogon::k403Forbidden));
@@ -201,7 +216,11 @@ void EmployeeController::removeSkill(
         RoleGuard::requireRole(request, "ADMIN");
 
         employeeService->removeSkill(employeeId, skillId);
-        callback(ResponseBuilder::success({{"message", "Skill removed successfully."}}));
+
+        const auto remainingSkills = employeeService->getSkills(employeeId);
+        nlohmann::json dataArray = nlohmann::json::array();
+        for (const auto& skill : remainingSkills) { dataArray.push_back(skillToJson(skill)); }
+        callback(ResponseBuilder::success({{"data", dataArray}}));
 
     } catch (const UnauthorizedException& ex) {
         callback(ResponseBuilder::error(ex.what(), drogon::k403Forbidden));

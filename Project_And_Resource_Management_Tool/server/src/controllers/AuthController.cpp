@@ -2,6 +2,7 @@
 #include "../repositories/MySQLUserRepository.hpp"
 #include "../repositories/MySQLEmployeeRepository.hpp"
 #include "../security/RoleGuard.hpp"
+#include "../security/TokenBlacklist.hpp"
 #include "../utils/AppException.hpp"
 #include "../utils/ResponseBuilder.hpp"
 #include "../dto/AuthDtos.hpp"
@@ -72,6 +73,10 @@ void AuthController::logout(
     const drogon::HttpRequestPtr& request,
     std::function<void(const drogon::HttpResponsePtr&)>&& callback
 ) {
+    const TokenClaims claims   = RoleGuard::extractClaims(request);
+    const std::string rawToken = request->getHeader("Authorization").substr(7);
+    TokenBlacklist::getInstance().add(rawToken, claims.exp);
+
     callback(ResponseBuilder::success(
         {{"success", true}, {"message", "Logged out successfully."}}
     ));

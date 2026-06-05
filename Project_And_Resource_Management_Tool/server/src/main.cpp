@@ -12,6 +12,8 @@
 #include "controllers/EmployeeController.hpp"
 #include "controllers/ProjectController.hpp"
 #include "controllers/ConfigController.hpp"
+#include "controllers/ManagerController.hpp"
+#include "controllers/EmployeeApiController.hpp"
 #include "security/JwtMiddleware.hpp"
 
 int main() {

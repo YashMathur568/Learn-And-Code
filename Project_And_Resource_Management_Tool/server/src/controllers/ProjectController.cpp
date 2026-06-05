@@ -44,8 +44,8 @@ void ProjectController::createProject(
         const auto jsonBody       = nlohmann::json::parse(request->getBody());
         const auto createRequest  = CreateProjectRequest::fromJson(jsonBody);
 
-        const int newProjectId = projectService->createProject(createRequest);
-        callback(ResponseBuilder::success({{"projectId", newProjectId}}, drogon::k201Created));
+        const Project newProject = projectService->createProject(createRequest);
+        callback(ResponseBuilder::success(projectToJson(newProject), drogon::k201Created));
 
     } catch (const UnauthorizedException& ex) {
         callback(ResponseBuilder::error(ex.what(), drogon::k403Forbidden));
@@ -71,8 +71,8 @@ void ProjectController::updateProject(
         const auto jsonBody      = nlohmann::json::parse(request->getBody());
         const auto updateRequest = UpdateProjectRequest::fromJson(jsonBody);
 
-        projectService->updateProject(projectId, updateRequest);
-        callback(ResponseBuilder::success({{"message", "Project updated successfully."}}));
+        const Project updatedProject = projectService->updateProject(projectId, updateRequest);
+        callback(ResponseBuilder::success(projectToJson(updatedProject)));
 
     } catch (const UnauthorizedException& ex) {
         callback(ResponseBuilder::error(ex.what(), drogon::k403Forbidden));
@@ -122,8 +122,10 @@ void ProjectController::createMilestone(
         const auto jsonBody       = nlohmann::json::parse(request->getBody());
         const auto createRequest  = CreateMilestoneRequest::fromJson(jsonBody);
 
-        const int newMilestoneId = projectService->createMilestone(projectId, createRequest);
-        callback(ResponseBuilder::success({{"milestoneId", newMilestoneId}}, drogon::k201Created));
+        const auto milestones = projectService->createMilestone(projectId, createRequest);
+        nlohmann::json dataArray = nlohmann::json::array();
+        for (const auto& milestone : milestones) { dataArray.push_back(milestoneToJson(milestone)); }
+        callback(ResponseBuilder::success({{"data", dataArray}}, drogon::k201Created));
 
     } catch (const UnauthorizedException& ex) {
         callback(ResponseBuilder::error(ex.what(), drogon::k403Forbidden));
@@ -150,8 +152,10 @@ void ProjectController::updateMilestone(
         const auto jsonBody      = nlohmann::json::parse(request->getBody());
         const auto updateRequest = UpdateMilestoneRequest::fromJson(jsonBody);
 
-        projectService->updateMilestone(projectId, milestoneId, updateRequest);
-        callback(ResponseBuilder::success({{"message", "Milestone updated successfully."}}));
+        const auto milestones = projectService->updateMilestone(projectId, milestoneId, updateRequest);
+        nlohmann::json dataArray = nlohmann::json::array();
+        for (const auto& milestone : milestones) { dataArray.push_back(milestoneToJson(milestone)); }
+        callback(ResponseBuilder::success({{"data", dataArray}}));
 
     } catch (const UnauthorizedException& ex) {
         callback(ResponseBuilder::error(ex.what(), drogon::k403Forbidden));

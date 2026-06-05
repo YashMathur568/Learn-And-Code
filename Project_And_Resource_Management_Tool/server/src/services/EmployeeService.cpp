@@ -1,4 +1,5 @@
 #include "EmployeeService.hpp"
+#include "../repositories/MySQLAllocationRepository.hpp"
 #include "../utils/AppException.hpp"
 
 #include <algorithm>
@@ -7,13 +8,15 @@ const std::vector<std::string> EmployeeService::VALID_CATEGORIES   = {"Backend",
 const std::vector<std::string> EmployeeService::VALID_PROFICIENCIES = {"Beginner", "Intermediate", "Advanced"};
 
 EmployeeService::EmployeeService(
-    std::shared_ptr<IEmployeeRepository> employeeRepository,
-    std::shared_ptr<IUserRepository>     userRepository,
-    std::shared_ptr<ISkillRepository>    skillRepository
+    std::shared_ptr<IEmployeeRepository>  employeeRepository,
+    std::shared_ptr<IUserRepository>      userRepository,
+    std::shared_ptr<ISkillRepository>     skillRepository,
+    std::shared_ptr<IAllocationRepository> allocationRepository
 )
     : employeeRepository(std::move(employeeRepository))
     , userRepository(std::move(userRepository))
-    , skillRepository(std::move(skillRepository)) {}
+    , skillRepository(std::move(skillRepository))
+    , allocationRepository(std::move(allocationRepository)) {}
 
 void EmployeeService::validateSkillFields(const SkillRequest& request) const {
     if (request.skillName.empty()) {
@@ -41,7 +44,19 @@ std::vector<Employee> EmployeeService::getAllEmployees() {
     return employeeRepository->findAll();
 }
 
-void EmployeeService::updateEmployee(int employeeId, const UpdateEmployeeRequest& request) {
+std::vector<Employee> EmployeeService::getByManagerId(int managerId) {
+    return employeeRepository->findByManagerId(managerId);
+}
+
+Employee EmployeeService::getById(int employeeId) {
+    auto optionalEmployee = employeeRepository->findById(employeeId);
+    if (!optionalEmployee.has_value()) {
+        throw NotFoundException("Employee with ID " + std::to_string(employeeId) + " not found.");
+    }
+    return optionalEmployee.value();
+}
+
+Employee EmployeeService::updateEmployee(int employeeId, const UpdateEmployeeRequest& request) {
     if (request.fullName.empty() || request.email.empty() ||
         request.department.empty() || request.designation.empty()) {
         throw ValidationException("fullName, email, department, and designation are required.");
@@ -59,9 +74,10 @@ void EmployeeService::updateEmployee(int employeeId, const UpdateEmployeeRequest
     updatedEmployee.designation    = request.designation;
 
     employeeRepository->update(updatedEmployee);
+    return updatedEmployee;
 }
 
-void EmployeeService::deactivateEmployee(int employeeId) {
+std::vector<Allocation> EmployeeService::deactivateEmployee(int employeeId) {
     auto optionalEmployee = employeeRepository->findById(employeeId);
     if (!optionalEmployee.has_value()) {
         throw NotFoundException("Employee with ID " + std::to_string(employeeId) + " not found.");
@@ -69,8 +85,12 @@ void EmployeeService::deactivateEmployee(int employeeId) {
     if (!optionalEmployee->isActive) {
         throw ValidationException("Employee is already inactive.");
     }
+    const std::vector<Allocation> endedAllocations = allocationRepository->findActiveByEmployeeId(employeeId);
+    allocationRepository->endAllByEmployee(employeeId);
     employeeRepository->setActiveStatus(employeeId, false);
+    employeeRepository->setStatus(employeeId, "BENCH");
     userRepository->setActiveStatus(optionalEmployee->userId, false);
+    return endedAllocations;
 }
 
 void EmployeeService::assignManager(int employeeId, const AssignManagerRequest& request) {
@@ -104,7 +124,7 @@ std::vector<EmployeeSkill> EmployeeService::getSkills(int employeeId) {
     return skillRepository->findByEmployeeId(employeeId);
 }
 
-int EmployeeService::addSkill(int employeeId, const SkillRequest& request) {
+EmployeeSkill EmployeeService::addSkill(int employeeId, const SkillRequest& request) {
     auto optionalEmployee = employeeRepository->findById(employeeId);
     if (!optionalEmployee.has_value()) {
         throw NotFoundException("Employee with ID " + std::to_string(employeeId) + " not found.");
@@ -118,7 +138,9 @@ int EmployeeService::addSkill(int employeeId, const SkillRequest& request) {
     skill.category    = request.category;
     skill.proficiency = request.proficiency;
 
-    return skillRepository->create(skill);
+    const int newSkillId = skillRepository->create(skill);
+    skill.skillId = newSkillId;
+    return skill;
 }
 
 void EmployeeService::updateSkill(int employeeId, int skillId, const SkillRequest& request) {
