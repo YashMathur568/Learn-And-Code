@@ -15,6 +15,7 @@ public:
     virtual std::vector<Timesheet>      findByEmployeeId(int employeeId)                                        = 0;
     virtual std::vector<Timesheet>      findByManagerTeam(int managerEmployeeId, const std::string& weekStart)  = 0;
     virtual int                         create(const Timesheet& timesheet)                                      = 0;
+    virtual void                        createMissed(int employeeId, const std::string& weekStart)              = 0;
     virtual std::vector<TimesheetEntry> getEntries(int timesheetId)                                             = 0;
     virtual void                        addEntry(const TimesheetEntry& entry)                                   = 0;
 };

@@ -14,6 +14,13 @@
 #include "controllers/ConfigController.hpp"
 #include "controllers/ManagerController.hpp"
 #include "controllers/EmployeeApiController.hpp"
+#include "controllers/AIController.hpp"
+#include "services/SchedulerService.hpp"
+#include "repositories/MySQLEmployeeRepository.hpp"
+#include "repositories/MySQLAllocationRepository.hpp"
+#include "repositories/MySQLProjectRepository.hpp"
+#include "repositories/MySQLMilestoneRepository.hpp"
+#include "repositories/MySQLTimesheetRepository.hpp"
 #include "security/JwtMiddleware.hpp"
 
 int main() {
@@ -28,6 +35,16 @@ int main() {
             appConfig.database.username,
             appConfig.database.password
         );
+
+        SchedulerService scheduler(
+            std::make_shared<MySQLEmployeeRepository>(),
+            std::make_shared<MySQLAllocationRepository>(),
+            std::make_shared<MySQLProjectRepository>(),
+            std::make_shared<MySQLMilestoneRepository>(),
+            std::make_shared<MySQLTimesheetRepository>(),
+            appConfig.schedulerIntervalHours
+        );
+        scheduler.start();
 
         const size_t threadCount = std::max(
             1u,

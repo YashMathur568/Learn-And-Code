@@ -39,6 +39,8 @@ set(JWT_BUILD_EXAMPLES   OFF CACHE BOOL "" FORCE)
 set(JWT_DISABLE_PICOJSON ON  CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(jwt-cpp)
 
+find_package(CURL REQUIRED)
+
 file(GLOB_RECURSE SERVER_SOURCES CONFIGURE_DEPENDS "src/*.cpp")
 
 add_executable(prm-server ${SERVER_SOURCES})
@@ -58,6 +60,7 @@ target_link_libraries(prm-server
         ${MYSQL_CPPCONN_LIBRARY}
         jwt-cpp::jwt-cpp
         crypt
+        CURL::libcurl
 )
 
 # Copy config.json to the build/server directory automatically

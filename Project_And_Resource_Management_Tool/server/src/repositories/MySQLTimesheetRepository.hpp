@@ -11,6 +11,7 @@ public:
     std::vector<Timesheet>      findByEmployeeId(int employeeId)                                        override;
     std::vector<Timesheet>      findByManagerTeam(int managerEmployeeId, const std::string& weekStart)  override;
     int                         create(const Timesheet& timesheet)                                      override;
+    void                        createMissed(int employeeId, const std::string& weekStart)              override;
     std::vector<TimesheetEntry> getEntries(int timesheetId)                                             override;
     void                        addEntry(const TimesheetEntry& entry)                                   override;
 

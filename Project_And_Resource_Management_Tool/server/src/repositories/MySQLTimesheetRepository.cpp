@@ -180,3 +180,20 @@ void MySQLTimesheetRepository::addEntry(const TimesheetEntry& entry) {
         throw AppException(std::string("DB error in addEntry: ") + sqlException.what());
     }
 }
+
+void MySQLTimesheetRepository::createMissed(int employeeId, const std::string& weekStart) {
+    try {
+        auto connection = DatabasePool::getInstance().acquire();
+        std::unique_ptr<sql::PreparedStatement> statement(
+            connection->prepareStatement(
+                "INSERT IGNORE INTO timesheets (employee_id, week_start, status, submitted_at) "
+                "VALUES (?, ?, 'MISSED', NULL)"
+            )
+        );
+        statement->setInt(1, employeeId);
+        statement->setString(2, weekStart);
+        statement->executeUpdate();
+    } catch (const sql::SQLException& sqlException) {
+        throw AppException(std::string("DB error in createMissed: ") + sqlException.what());
+    }
+}
