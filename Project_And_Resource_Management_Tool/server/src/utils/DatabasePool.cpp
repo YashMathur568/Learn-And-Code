@@ -42,7 +42,7 @@ void DatabasePool::initialize(
     urlBuilder << "tcp://" << host << ":" << port;
     const std::string connectionUrl = urlBuilder.str();
 
-    sql::mysql::MySQL_Driver* driver = sql::mysql::get_mysql_driver_instance();
+    driver = sql::mysql::get_mysql_driver_instance();
 
     try {
         for (int index = 0; index < poolSize; ++index) {
@@ -69,8 +69,6 @@ ConnectionGuard DatabasePool::acquire() {
     if (connection->isClosed()) {
         std::ostringstream urlBuilder;
         urlBuilder << "tcp://" << storedHost << ":" << storedPort;
-        sql::mysql::MySQL_Driver* driver = sql::mysql::get_mysql_driver_instance();
-
         try {
             delete connection;
             connection = driver->connect(urlBuilder.str(), storedUsername, storedPassword);

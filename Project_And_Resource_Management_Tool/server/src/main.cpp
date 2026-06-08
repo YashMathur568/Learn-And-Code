@@ -51,12 +51,20 @@ int main() {
             std::thread::hardware_concurrency()
         );
 
-        drogon::app()
+        auto& app = drogon::app();
+
+        app
             .setLogPath("./logs")
             .setLogLevel(trantor::Logger::kInfo)
             .addListener("0.0.0.0", appConfig.serverPort)
-            .setThreadNum(static_cast<int>(threadCount))
-            .run();
+            .setThreadNum(static_cast<int>(threadCount));
+
+        std::cout << "[INFO] PRM server started on http://localhost:"
+                  << appConfig.serverPort
+                  << " with " << threadCount << " worker thread(s)."
+                  << std::endl;
+
+        app.run();
 
     } catch (const AppException& appException) {
         std::cerr << "[FATAL] " << appException.what() << std::endl;

@@ -5,6 +5,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <cppconn/connection.h>
+#include <mysql_driver.h>
 
 class ConnectionGuard;
 
@@ -40,6 +41,7 @@ private:
     std::string storedDatabaseName;
     std::string storedUsername;
     std::string storedPassword;
+    sql::mysql::MySQL_Driver* driver{nullptr};
     bool        initialized{false};
 
     friend class ConnectionGuard;

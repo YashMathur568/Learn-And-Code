@@ -1,6 +1,7 @@
 #include "SchedulerService.hpp"
 #include "../utils/AppException.hpp"
 
+#include <mariadb/mysql.h>
 #include <chrono>
 #include <ctime>
 #include <iomanip>
@@ -39,6 +40,8 @@ void SchedulerService::stop() {
 }
 
 void SchedulerService::loop() {
+    mysql_thread_init();
+
     runOnce();
     const auto interval = std::chrono::hours(intervalHours_);
     auto nextRun = std::chrono::steady_clock::now() + interval;
@@ -50,6 +53,8 @@ void SchedulerService::loop() {
             nextRun = std::chrono::steady_clock::now() + interval;
         }
     }
+
+    mysql_thread_end();
 }
 
 void SchedulerService::runOnce() {

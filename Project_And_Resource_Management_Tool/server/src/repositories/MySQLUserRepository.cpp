@@ -30,7 +30,7 @@ std::optional<User> MySQLUserRepository::findByUsername(const std::string& usern
             connection->prepareStatement(
                 "SELECT user_id, full_name, email, username, password_hash, "
                 "role, is_active, force_pwd_change, created_at "
-                "FROM users WHERE username = ?"
+                "FROM users WHERE BINARY username = ?"
             )
         );
         statement->setString(1, username);
@@ -168,7 +168,7 @@ bool MySQLUserRepository::existsByUsername(const std::string& username) {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                "SELECT COUNT(*) FROM users WHERE username = ?"
+                "SELECT COUNT(*) FROM users WHERE BINARY username = ?"
             )
         );
         statement->setString(1, username);
