@@ -3,7 +3,6 @@
 
 #include <mysql_driver.h>
 #include <cppconn/exception.h>
-#include <sstream>
 
 DatabasePool::~DatabasePool() {
     std::lock_guard<std::mutex> lock(poolMutex);
@@ -38,9 +37,7 @@ void DatabasePool::initialize(
     storedUsername     = username;
     storedPassword     = password;
 
-    std::ostringstream urlBuilder;
-    urlBuilder << "tcp://" << host << ":" << port;
-    const std::string connectionUrl = urlBuilder.str();
+    const std::string connectionUrl = "tcp://" + host + ":" + std::to_string(port);
 
     driver = sql::mysql::get_mysql_driver_instance();
 
@@ -67,11 +64,12 @@ ConnectionGuard DatabasePool::acquire() {
     connections.pop();
 
     if (connection->isClosed()) {
-        std::ostringstream urlBuilder;
-        urlBuilder << "tcp://" << storedHost << ":" << storedPort;
         try {
+            const std::string connectionUrl =
+                "tcp://" + storedHost + ":" + std::to_string(storedPort);
+
             delete connection;
-            connection = driver->connect(urlBuilder.str(), storedUsername, storedPassword);
+            connection = driver->connect(connectionUrl, storedUsername, storedPassword);
             connection->setSchema(storedDatabaseName);
         } catch (const sql::SQLException& sqlException) {
             throw AppException(

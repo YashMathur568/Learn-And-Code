@@ -35,6 +35,7 @@ void ConfigLoader::load(const std::string& filePath) {
         appConfig.schedulerIntervalHours = jsonConfig.at("schedulerIntervalHours").get<int>();
         appConfig.maxWeeklyHours         = jsonConfig.at("maxWeeklyHours").get<int>();
         appConfig.serverPort             = jsonConfig.at("serverPort").get<int>();
+        appConfig.jwtSecret              = jsonConfig.at("jwtSecret").get<std::string>();
 
     } catch (const nlohmann::json::parse_error& parseError) {
         throw AppException(std::string("Configuration file parse error: ") + parseError.what());

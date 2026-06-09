@@ -1,5 +1,6 @@
 #include "JwtUtil.hpp"
 #include "../utils/AppException.hpp"
+#include "../utils/ConfigLoader.hpp"
 
 #include <jwt-cpp/jwt.h>
 #include <jwt-cpp/traits/nlohmann-json/traits.h>
@@ -15,11 +16,7 @@ static constexpr auto CLAIM_USER_ID       = "userId";
 static constexpr auto JWT_ISSUER          = "prm-server";
 
 std::string JwtUtil::getSecret() {
-    const char* secretEnv = std::getenv("PRM_JWT_SECRET");
-    if (secretEnv != nullptr && std::string(secretEnv).length() >= 32) {
-        return std::string(secretEnv);
-    }
-    return "prm-default-secret-change-in-production-min32chars";
+    return ConfigLoader::getInstance().getConfig().jwtSecret;
 }
 
 std::string JwtUtil::generate(int userId, const std::string& role, int employeeId) {

@@ -23,6 +23,7 @@ struct AppConfig {
     int            schedulerIntervalHours{4};
     int            maxWeeklyHours{40};
     int            serverPort{8080};
+    std::string    jwtSecret;
 };
 
 class ConfigLoader {
