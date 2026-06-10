@@ -1,8 +1,6 @@
 #pragma once
 
-#include "../dto/AdminDtos.hpp"
-#include "../models/Employee.hpp"
-#include "../models/EmployeeSkill.hpp"
+#include "IEmployeeService.hpp"
 #include "../repositories/IEmployeeRepository.hpp"
 #include "../repositories/IUserRepository.hpp"
 #include "../repositories/ISkillRepository.hpp"
@@ -11,7 +9,7 @@
 #include <memory>
 #include <vector>
 
-class EmployeeService {
+class EmployeeService : public IEmployeeService {
 public:
     EmployeeService(
         std::shared_ptr<IEmployeeRepository>  employeeRepository,
@@ -20,17 +18,18 @@ public:
         std::shared_ptr<IAllocationRepository> allocationRepository
     );
 
-    std::vector<Employee>    getAllEmployees();
-    std::vector<Employee>    getByManagerId(int managerId);
-    Employee                 getById(int employeeId);
-    Employee                 updateEmployee(int employeeId, const UpdateEmployeeRequest& request);
-    std::vector<Allocation>  deactivateEmployee(int employeeId);
-    void                     assignManager(int employeeId, const AssignManagerRequest& request);
+    std::vector<Employee>    getAllEmployees()                                                     override;
+    std::vector<Employee>    getByManagerId(int managerId)                                        override;
+    Employee                 getById(int employeeId)                                              override;
+    Employee                 updateEmployee(int employeeId, const UpdateEmployeeRequest& request) override;
+    std::vector<Allocation>  deactivateEmployee(int employeeId)                                   override;
+    void                     assignManager(int employeeId, const AssignManagerRequest& request)   override;
 
-    std::vector<EmployeeSkill> getSkills(int employeeId);
-    EmployeeSkill              addSkill(int employeeId, const SkillRequest& request);
-    void                       updateSkill(int employeeId, int skillId, const SkillRequest& request);
-    void                       removeSkill(int employeeId, int skillId);
+    std::vector<EmployeeSkill> getSkills(int employeeId)                                          override;
+    EmployeeSkill              addSkill(int employeeId, const SkillRequest& request)              override;
+    void                       updateSkill(int employeeId, int skillId,
+                                           const SkillRequest& request)                           override;
+    void                       removeSkill(int employeeId, int skillId)                           override;
 
 private:
     std::shared_ptr<IEmployeeRepository>  employeeRepository;

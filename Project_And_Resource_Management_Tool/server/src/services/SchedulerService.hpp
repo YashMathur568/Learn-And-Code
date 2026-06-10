@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ISchedulerService.hpp"
 #include "../repositories/IEmployeeRepository.hpp"
 #include "../repositories/IAllocationRepository.hpp"
 #include "../repositories/IProjectRepository.hpp"
@@ -10,7 +11,7 @@
 #include <memory>
 #include <thread>
 
-class SchedulerService {
+class SchedulerService : public ISchedulerService {
 public:
     SchedulerService(
         std::shared_ptr<IEmployeeRepository>   employeeRepository,
@@ -23,9 +24,9 @@ public:
 
     ~SchedulerService();
 
-    void start();
-    void stop();
-    void runOnce();
+    void start()   override;
+    void stop()    override;
+    void runOnce() override;
 
 private:
     void loop();

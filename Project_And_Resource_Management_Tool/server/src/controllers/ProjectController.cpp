@@ -1,6 +1,8 @@
 #include "ProjectController.hpp"
+#include "../services/ProjectService.hpp"
 #include "../repositories/MySQLProjectRepository.hpp"
 #include "../repositories/MySQLMilestoneRepository.hpp"
+#include "../repositories/MySQLEmployeeRepository.hpp"
 #include "../security/RoleGuard.hpp"
 #include "../utils/AppException.hpp"
 #include "../utils/ResponseBuilder.hpp"
@@ -10,7 +12,8 @@
 ProjectController::ProjectController()
     : projectService(std::make_shared<ProjectService>(
           std::make_shared<MySQLProjectRepository>(),
-          std::make_shared<MySQLMilestoneRepository>()
+          std::make_shared<MySQLMilestoneRepository>(),
+          std::make_shared<MySQLEmployeeRepository>()
       )) {}
 
 void ProjectController::getAllProjects(

@@ -1,5 +1,6 @@
 #include "ProjectService.hpp"
 #include "../utils/AppException.hpp"
+#include "../repositories/IEmployeeRepository.hpp"
 
 #include <algorithm>
 
@@ -8,10 +9,12 @@ const std::vector<std::string> ProjectService::VALID_MILESTONE_STATUSES = {"NOT_
 
 ProjectService::ProjectService(
     std::shared_ptr<IProjectRepository>   projectRepository,
-    std::shared_ptr<IMilestoneRepository> milestoneRepository
+    std::shared_ptr<IMilestoneRepository> milestoneRepository,
+    std::shared_ptr<IEmployeeRepository>  employeeRepository
 )
     : projectRepository(std::move(projectRepository))
-    , milestoneRepository(std::move(milestoneRepository)) {}
+    , milestoneRepository(std::move(milestoneRepository))
+    , employeeRepository(std::move(employeeRepository)) {}
 
 void ProjectService::validateProjectStatus(const std::string& status) const {
     bool statusValid = std::any_of(
@@ -40,7 +43,7 @@ Project ProjectService::createProject(const CreateProjectRequest& request) {
 
     validateProjectStatus(request.status);
 
-    if (!projectRepository->managerExists(request.managerId)) {
+    if (!employeeRepository->findById(request.managerId).has_value()) {
         throw NotFoundException(
             "Employee with ID " + std::to_string(request.managerId) +
             " not found or is inactive. Cannot assign as project manager."
@@ -91,7 +94,7 @@ Project ProjectService::updateProject(int projectId, const UpdateProjectRequest&
 
     validateProjectStatus(request.status);
 
-    if (!projectRepository->managerExists(request.managerId)) {
+    if (!employeeRepository->findById(request.managerId).has_value()) {
         throw NotFoundException(
             "Employee with ID " + std::to_string(request.managerId) + " not found or is inactive."
         );

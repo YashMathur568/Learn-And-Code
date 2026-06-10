@@ -1,4 +1,5 @@
 #include "AuthController.hpp"
+#include "../services/AuthService.hpp"
 #include "../repositories/MySQLUserRepository.hpp"
 #include "../repositories/MySQLEmployeeRepository.hpp"
 #include "../security/RoleGuard.hpp"

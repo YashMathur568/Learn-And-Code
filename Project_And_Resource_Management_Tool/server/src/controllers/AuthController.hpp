@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../services/AuthService.hpp"
+#include "../services/IAuthService.hpp"
 #include "../security/JwtMiddleware.hpp"
 
 #include <drogon/HttpController.h>
@@ -36,5 +36,5 @@ public:
                 std::function<void(const drogon::HttpResponsePtr&)>&& callback);
 
 private:
-    std::shared_ptr<AuthService> authService;
+    std::shared_ptr<IAuthService> authService;
 };

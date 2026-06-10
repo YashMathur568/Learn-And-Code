@@ -1,32 +1,24 @@
 #pragma once
 
-#include "../dto/AdminDtos.hpp"
-#include "../models/User.hpp"
-#include "../models/Employee.hpp"
+#include "IUserService.hpp"
 #include "../repositories/IUserRepository.hpp"
 #include "../repositories/IEmployeeRepository.hpp"
 
 #include <memory>
-#include <optional>
 #include <vector>
 
-struct CreatedUserResult {
-    User                    user;
-    std::optional<Employee> employee;
-};
-
-class UserService {
+class UserService : public IUserService {
 public:
     UserService(
         std::shared_ptr<IUserRepository>     userRepository,
         std::shared_ptr<IEmployeeRepository> employeeRepository
     );
 
-    CreatedUserResult createUser(const CreateUserRequest& request);
-    std::vector<User> getAllUsers();
-    void              deactivateUser(int userId);
-    void              reactivateUser(int userId);
-    void              resetPassword(int userId, const ResetPasswordRequest& request);
+    CreatedUserResult createUser(const CreateUserRequest& request)                   override;
+    std::vector<User> getAllUsers()                                                   override;
+    void              deactivateUser(int userId)                                     override;
+    void              reactivateUser(int userId)                                     override;
+    void              resetPassword(int userId, const ResetPasswordRequest& request) override;
 
 private:
     std::shared_ptr<IUserRepository>     userRepository;

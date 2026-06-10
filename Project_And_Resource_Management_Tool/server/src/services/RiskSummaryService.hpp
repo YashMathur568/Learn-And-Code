@@ -1,5 +1,6 @@
 #pragma once
 
+#include "IRiskSummaryService.hpp"
 #include "../ai/ILLMAdapter.hpp"
 #include "../repositories/IProjectRepository.hpp"
 #include "../repositories/IMilestoneRepository.hpp"
@@ -10,7 +11,7 @@
 #include <memory>
 #include <string>
 
-class RiskSummaryService {
+class RiskSummaryService : public IRiskSummaryService {
 public:
     RiskSummaryService(
         std::shared_ptr<ILLMAdapter>           llmAdapter,
@@ -21,7 +22,7 @@ public:
         std::shared_ptr<IEmployeeRepository>   employeeRepository
     );
 
-    std::string generateSummary(int projectId, int managerEmployeeId);
+    std::string generateSummary(int projectId, int managerEmployeeId) override;
 
 private:
     std::string buildFactsPrompt(int projectId) const;

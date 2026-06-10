@@ -1,4 +1,6 @@
 #include "AIController.hpp"
+#include "../services/SkillMatchService.hpp"
+#include "../services/RiskSummaryService.hpp"
 #include "../ai/LLMAdapterFactory.hpp"
 #include "../repositories/MySQLProjectRepository.hpp"
 #include "../repositories/MySQLMilestoneRepository.hpp"

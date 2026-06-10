@@ -142,19 +142,4 @@ void MySQLProjectRepository::updateHealth(int projectId, const std::string& heal
     }
 }
 
-bool MySQLProjectRepository::managerExists(int employeeId) {
-    try {
-        auto connection = DatabasePool::getInstance().acquire();
-        std::unique_ptr<sql::PreparedStatement> statement(
-            connection->prepareStatement(
-                "SELECT COUNT(*) FROM employees WHERE employee_id = ? AND is_active = 1"
-            )
-        );
-        statement->setInt(1, employeeId);
-        std::unique_ptr<sql::ResultSet> resultSet(statement->executeQuery());
-        resultSet->next();
-        return resultSet->getInt(1) > 0;
-    } catch (const sql::SQLException& sqlException) {
-        throw AppException(std::string("DB error in managerExists: ") + sqlException.what());
-    }
-}
+

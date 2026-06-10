@@ -1,4 +1,8 @@
 #include "ManagerController.hpp"
+#include "../services/AllocationService.hpp"
+#include "../services/ProjectService.hpp"
+#include "../services/EmployeeService.hpp"
+#include "../services/TimesheetService.hpp"
 #include "../repositories/MySQLAllocationRepository.hpp"
 #include "../repositories/MySQLProjectRepository.hpp"
 #include "../repositories/MySQLMilestoneRepository.hpp"
@@ -24,7 +28,8 @@ ManagerController::ManagerController()
       )),
       projectService(std::make_shared<ProjectService>(
           std::make_shared<MySQLProjectRepository>(),
-          std::make_shared<MySQLMilestoneRepository>()
+          std::make_shared<MySQLMilestoneRepository>(),
+          std::make_shared<MySQLEmployeeRepository>()
       )),
       employeeService(std::make_shared<EmployeeService>(
           std::make_shared<MySQLEmployeeRepository>(),

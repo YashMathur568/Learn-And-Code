@@ -1,4 +1,5 @@
 #include "EmployeeController.hpp"
+#include "../services/EmployeeService.hpp"
 #include "../repositories/MySQLEmployeeRepository.hpp"
 #include "../repositories/MySQLUserRepository.hpp"
 #include "../repositories/MySQLSkillRepository.hpp"

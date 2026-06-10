@@ -1,7 +1,6 @@
 #pragma once
 
-#include "../dto/AllocationDtos.hpp"
-#include "../models/Allocation.hpp"
+#include "IAllocationService.hpp"
 #include "../repositories/IAllocationRepository.hpp"
 #include "../repositories/IEmployeeRepository.hpp"
 #include "../repositories/IProjectRepository.hpp"
@@ -9,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-class AllocationService {
+class AllocationService : public IAllocationService {
 public:
     AllocationService(
         std::shared_ptr<IAllocationRepository> allocationRepository,
@@ -17,12 +16,13 @@ public:
         std::shared_ptr<IProjectRepository>    projectRepository
     );
 
-    Allocation              createAllocation(int managerEmployeeId, const CreateAllocationRequest& request);
-    Allocation              endAllocation(int allocationId, int managerEmployeeId);
-    std::vector<Allocation> getByEmployeeId(int employeeId);
-    std::vector<Allocation> getActiveByEmployeeId(int employeeId);
-    std::vector<Allocation> getActiveByProjectId(int projectId);
-    int                     getTotalUtilisation(int employeeId);
+    Allocation              createAllocation(int managerEmployeeId,
+                                             const CreateAllocationRequest& request) override;
+    Allocation              endAllocation(int allocationId, int managerEmployeeId)   override;
+    std::vector<Allocation> getByEmployeeId(int employeeId)                          override;
+    std::vector<Allocation> getActiveByEmployeeId(int employeeId)                    override;
+    std::vector<Allocation> getActiveByProjectId(int projectId)                      override;
+    int                     getTotalUtilisation(int employeeId)                      override;
 
 private:
     std::shared_ptr<IAllocationRepository> allocationRepository;

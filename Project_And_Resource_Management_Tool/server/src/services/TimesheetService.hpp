@@ -1,8 +1,6 @@
 #pragma once
 
-#include "../dto/AllocationDtos.hpp"
-#include "../models/Timesheet.hpp"
-#include "../models/TimesheetEntry.hpp"
+#include "ITimesheetService.hpp"
 #include "../repositories/ITimesheetRepository.hpp"
 #include "../repositories/IAllocationRepository.hpp"
 #include "../repositories/IEmployeeRepository.hpp"
@@ -11,7 +9,7 @@
 #include <string>
 #include <vector>
 
-class TimesheetService {
+class TimesheetService : public ITimesheetService {
 public:
     TimesheetService(
         std::shared_ptr<ITimesheetRepository>  timesheetRepository,
@@ -19,9 +17,11 @@ public:
         std::shared_ptr<IEmployeeRepository>   employeeRepository
     );
 
-    TimesheetWithEntries              submitTimesheet(int employeeId, const SubmitTimesheetRequest& request);
-    std::vector<TimesheetWithEntries> getByEmployeeId(int employeeId);
-    std::vector<TimesheetWithEntries> getTeamTimesheets(int managerEmployeeId, const std::string& weekStart);
+    TimesheetWithEntries              submitTimesheet(int employeeId,
+                                                      const SubmitTimesheetRequest& request) override;
+    std::vector<TimesheetWithEntries> getByEmployeeId(int employeeId)                        override;
+    std::vector<TimesheetWithEntries> getTeamTimesheets(int managerEmployeeId,
+                                                        const std::string& weekStart)        override;
 
 private:
     std::shared_ptr<ITimesheetRepository>  timesheetRepository;

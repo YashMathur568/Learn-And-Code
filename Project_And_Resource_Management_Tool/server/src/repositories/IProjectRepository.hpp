@@ -16,5 +16,4 @@ public:
     virtual void                   update(const Project& project)              = 0;
     virtual void                   updateHealth(int projectId,
                                                 const std::string& health)     = 0;
-    virtual bool                   managerExists(int employeeId)               = 0;
 };

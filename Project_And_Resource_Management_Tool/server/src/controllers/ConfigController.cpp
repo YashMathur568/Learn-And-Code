@@ -1,4 +1,5 @@
 #include "ConfigController.hpp"
+#include "../services/ConfigService.hpp"
 #include "../repositories/MySQLConfigRepository.hpp"
 #include "../security/RoleGuard.hpp"
 #include "../utils/AppException.hpp"

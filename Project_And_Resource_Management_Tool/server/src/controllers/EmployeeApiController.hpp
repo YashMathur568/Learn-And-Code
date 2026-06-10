@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../services/AllocationService.hpp"
-#include "../services/TimesheetService.hpp"
+#include "../services/IAllocationService.hpp"
+#include "../services/ITimesheetService.hpp"
 #include <drogon/HttpController.h>
 #include <memory>
 
@@ -31,6 +31,6 @@ public:
     );
 
 private:
-    std::shared_ptr<AllocationService> allocationService;
-    std::shared_ptr<TimesheetService>  timesheetService;
+    std::shared_ptr<IAllocationService> allocationService;
+    std::shared_ptr<ITimesheetService>  timesheetService;
 };

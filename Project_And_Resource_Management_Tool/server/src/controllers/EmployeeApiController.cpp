@@ -1,4 +1,6 @@
 #include "EmployeeApiController.hpp"
+#include "../services/AllocationService.hpp"
+#include "../services/TimesheetService.hpp"
 #include "../repositories/MySQLAllocationRepository.hpp"
 #include "../repositories/MySQLProjectRepository.hpp"
 #include "../repositories/MySQLEmployeeRepository.hpp"

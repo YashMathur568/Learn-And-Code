@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../services/EmployeeService.hpp"
+#include "../services/IEmployeeService.hpp"
 #include <drogon/HttpController.h>
 #include <memory>
 
@@ -69,5 +69,5 @@ public:
     );
 
 private:
-    std::shared_ptr<EmployeeService> employeeService;
+    std::shared_ptr<IEmployeeService> employeeService;
 };

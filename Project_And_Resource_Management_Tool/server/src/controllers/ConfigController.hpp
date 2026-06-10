@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../services/ConfigService.hpp"
+#include "../services/IConfigService.hpp"
 #include <drogon/HttpController.h>
 #include <memory>
 
@@ -25,5 +25,5 @@ public:
     );
 
 private:
-    std::shared_ptr<ConfigService> configService;
+    std::shared_ptr<IConfigService> configService;
 };

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../services/SkillMatchService.hpp"
-#include "../services/RiskSummaryService.hpp"
+#include "../services/ISkillMatchService.hpp"
+#include "../services/IRiskSummaryService.hpp"
 #include <drogon/HttpController.h>
 #include <memory>
 
@@ -26,6 +26,6 @@ public:
     );
 
 private:
-    std::shared_ptr<SkillMatchService>  skillMatchService_;
-    std::shared_ptr<RiskSummaryService> riskSummaryService_;
+    std::shared_ptr<ISkillMatchService>  skillMatchService_;
+    std::shared_ptr<IRiskSummaryService> riskSummaryService_;
 };

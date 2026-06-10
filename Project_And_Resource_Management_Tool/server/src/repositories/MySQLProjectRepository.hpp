@@ -18,7 +18,6 @@ public:
     void                   update(const Project& project)          override;
     void                   updateHealth(int projectId,
                                         const std::string& health) override;
-    bool                   managerExists(int employeeId)           override;
 
 private:
     static Project mapRowToProject(sql::ResultSet* resultSet);

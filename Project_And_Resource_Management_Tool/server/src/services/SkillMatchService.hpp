@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ISkillMatchService.hpp"
 #include "../ai/ILLMAdapter.hpp"
 #include "../utils/DatabasePool.hpp"
 
@@ -8,11 +9,11 @@
 #include <vector>
 #include <nlohmann/json.hpp>
 
-class SkillMatchService {
+class SkillMatchService : public ISkillMatchService {
 public:
     explicit SkillMatchService(std::shared_ptr<ILLMAdapter> llmAdapter);
 
-    nlohmann::json findMatches(const std::string& naturalLanguageQuery);
+    nlohmann::json findMatches(const std::string& naturalLanguageQuery) override;
 
 private:
     static std::string buildSqlPrompt(const std::string& query);

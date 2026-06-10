@@ -1,4 +1,5 @@
 #include "UserController.hpp"
+#include "../services/UserService.hpp"
 #include "../repositories/MySQLUserRepository.hpp"
 #include "../repositories/MySQLEmployeeRepository.hpp"
 #include "../security/RoleGuard.hpp"
