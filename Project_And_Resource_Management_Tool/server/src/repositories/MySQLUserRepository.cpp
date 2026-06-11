@@ -12,14 +12,14 @@
 User MySQLUserRepository::mapRowToUser(sql::ResultSet* resultSet) {
     User user;
     user.userId         = resultSet->getInt("user_id");
-    user.fullName       = resultSet->getString("full_name").asStdString();
-    user.email          = resultSet->getString("email").asStdString();
-    user.username       = resultSet->getString("username").asStdString();
-    user.passwordHash   = resultSet->getString("password_hash").asStdString();
-    user.role           = resultSet->getString("role").asStdString();
+    user.fullName       = resultSet->getString("full_name");
+    user.email          = resultSet->getString("email");
+    user.username       = resultSet->getString("username");
+    user.passwordHash   = resultSet->getString("password_hash");
+    user.role           = resultSet->getString("role");
     user.isActive       = resultSet->getBoolean("is_active");
     user.forcePwdChange = resultSet->getBoolean("force_pwd_change");
-    user.createdAt      = resultSet->getString("created_at").asStdString();
+    user.createdAt      = resultSet->getString("created_at");
     return user;
 }
 

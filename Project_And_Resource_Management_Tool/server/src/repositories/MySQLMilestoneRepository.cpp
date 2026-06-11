@@ -11,9 +11,9 @@ Milestone MySQLMilestoneRepository::mapRowToMilestone(sql::ResultSet* resultSet)
     Milestone milestone;
     milestone.milestoneId = resultSet->getInt("milestone_id");
     milestone.projectId   = resultSet->getInt("project_id");
-    milestone.title       = resultSet->getString("title").asStdString();
-    milestone.dueDate     = resultSet->getString("due_date").asStdString();
-    milestone.status      = resultSet->getString("status").asStdString();
+    milestone.title       = resultSet->getString("title");
+    milestone.dueDate     = resultSet->getString("due_date");
+    milestone.status      = resultSet->getString("status");
     return milestone;
 }
 

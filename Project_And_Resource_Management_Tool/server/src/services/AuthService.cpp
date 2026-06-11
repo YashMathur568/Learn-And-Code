@@ -65,8 +65,12 @@ void AuthService::changePassword(int userId, const ChangePasswordRequest& reques
 
     const User& user = optionalUser.value();
 
-    if (!PasswordUtil::verify(request.currentPassword, user.passwordHash)) {
-        throw UnauthorizedException("Current password is incorrect.");
+    // When force_pwd_change is set the user already proved their identity at login;
+    // skip the current-password check so the forced-change flow works without it.
+    if (!user.forcePwdChange) {
+        if (!PasswordUtil::verify(request.currentPassword, user.passwordHash)) {
+            throw UnauthorizedException("Current password is incorrect.");
+        }
     }
 
     const std::string newHash = PasswordUtil::hash(request.newPassword);

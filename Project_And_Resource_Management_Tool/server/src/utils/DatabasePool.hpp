@@ -41,7 +41,7 @@ private:
     std::string storedDatabaseName;
     std::string storedUsername;
     std::string storedPassword;
-    sql::mysql::MySQL_Driver* driver{nullptr};
+    sql::Driver* driver{nullptr};
     bool        initialized{false};
 
     friend class ConnectionGuard;

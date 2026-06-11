@@ -4,10 +4,23 @@
 #include <vector>
 #include <iostream>
 #include <sstream>
-#include <termios.h>
-#include <unistd.h>
 #include <ctime>
 #include <iomanip>
+
+#ifdef _WIN32
+#  include <conio.h>
+#else
+#  include <termios.h>
+#  include <unistd.h>
+#endif
+
+// localtime_r shim for Windows
+#if defined(_WIN32) && !defined(localtime_r)
+inline struct tm* localtime_r(const time_t* timep, struct tm* result) {
+    localtime_s(result, timep);
+    return result;
+}
+#endif
 
 namespace ConsoleUtil {
 
@@ -75,18 +88,27 @@ inline std::string promptInput(const std::string& label) {
 inline std::string promptPassword(const std::string& label) {
     std::cout << label;
     std::cout.flush();
-
+    std::string password;
+#ifdef _WIN32
+    int ch;
+    while ((ch = _getch()) != '\r' && ch != '\n') {
+        if (ch == '\b' && !password.empty()) {
+            password.pop_back();
+        } else if (ch >= 32 && ch < 127) {
+            password += static_cast<char>(ch);
+        }
+    }
+    std::cout << "\n";
+#else
     termios oldt{};
     tcgetattr(STDIN_FILENO, &oldt);
     termios newt = oldt;
     newt.c_lflag &= ~static_cast<unsigned int>(ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-
-    std::string password;
     std::getline(std::cin, password);
-
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     std::cout << "\n";
+#endif
     return password;
 }
 

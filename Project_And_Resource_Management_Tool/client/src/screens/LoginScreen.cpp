@@ -80,7 +80,7 @@ static bool showChangePasswordScreen(const ApiClient& api) {
 
         const auto resp = api.post(
             "/api/auth/change-password",
-            {{"currentPassword", ""}, {"newPassword", newPass}},
+            {{"currentPassword", ""}, {"newPassword", newPass}, {"confirmPassword", confirmPass}},
             AppSession::get().token
         );
 

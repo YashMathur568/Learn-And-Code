@@ -13,8 +13,8 @@ Allocation MySQLAllocationRepository::mapRowToAllocation(sql::ResultSet* resultS
     allocation.employeeId   = resultSet->getInt("employee_id");
     allocation.projectId    = resultSet->getInt("project_id");
     allocation.utilisation  = resultSet->getInt("utilisation");
-    allocation.fromDate     = resultSet->getString("from_date").asStdString();
-    allocation.toDate       = resultSet->getString("to_date").asStdString();
+    allocation.fromDate     = resultSet->getString("from_date");
+    allocation.toDate       = resultSet->getString("to_date");
     allocation.isActive     = resultSet->getBoolean("is_active");
     return allocation;
 }

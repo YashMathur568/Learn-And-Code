@@ -74,7 +74,7 @@ CREATE TABLE allocations (
     project_id     INT  NOT NULL,
     utilisation    INT  NOT NULL,
     from_date      DATE NOT NULL,
-    to_date        DATE NOT NULL,
+    `to_date`      DATE NOT NULL,
     is_active      TINYINT(1) NOT NULL DEFAULT 1,
     CONSTRAINT pk_allocations          PRIMARY KEY (allocation_id),
     CONSTRAINT fk_allocations_employee FOREIGN KEY (employee_id) REFERENCES employees (employee_id),
@@ -112,7 +112,7 @@ CREATE TABLE system_config (
 );
 
 CREATE INDEX idx_allocations_employee_active
-    ON allocations (employee_id, is_active, from_date, to_date);
+    ON allocations (employee_id, is_active, from_date, `to_date`);
 
 CREATE INDEX idx_milestones_project_due
     ON milestones (project_id, status, due_date);

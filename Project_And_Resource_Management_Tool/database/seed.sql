@@ -5,7 +5,7 @@ VALUES (
     'System Admin',
     'admin@prm.local',
     'admin',
-    '$2b$12$0n.fAWOlDQg1pbdPTHIQXOPVoUw6Dt5NFPdMGa3uboTEBwD3.c2N6',
+    'pbkdf2:sha256:100000:1a2b3c4d5e6f708192a3b4c5d6e7f809:cf348f899d6fb6d3a5f4b32e0df23e5e7e610de081695359f15f09c523de3e60',
     'ADMIN',
     1,
     1

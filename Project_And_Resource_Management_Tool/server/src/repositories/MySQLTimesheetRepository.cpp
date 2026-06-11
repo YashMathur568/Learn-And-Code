@@ -11,11 +11,11 @@ Timesheet MySQLTimesheetRepository::mapRowToTimesheet(sql::ResultSet* resultSet)
     Timesheet timesheet;
     timesheet.timesheetId  = resultSet->getInt("timesheet_id");
     timesheet.employeeId   = resultSet->getInt("employee_id");
-    timesheet.weekStart    = resultSet->getString("week_start").asStdString();
-    timesheet.status       = resultSet->getString("status").asStdString();
+    timesheet.weekStart    = resultSet->getString("week_start");
+    timesheet.status       = resultSet->getString("status");
     timesheet.submittedAt  = resultSet->isNull("submitted_at")
                              ? ""
-                             : resultSet->getString("submitted_at").asStdString();
+                             : resultSet->getString("submitted_at");
     return timesheet;
 }
 
@@ -27,7 +27,7 @@ TimesheetEntry MySQLTimesheetRepository::mapRowToEntry(sql::ResultSet* resultSet
     entry.hours         = resultSet->getInt("hours");
     entry.activityTags  = resultSet->isNull("activity_tags")
                           ? ""
-                          : resultSet->getString("activity_tags").asStdString();
+                          : resultSet->getString("activity_tags");
     return entry;
 }
 

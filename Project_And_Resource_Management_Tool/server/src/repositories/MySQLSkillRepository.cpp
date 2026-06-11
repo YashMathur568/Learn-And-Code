@@ -11,9 +11,9 @@ EmployeeSkill MySQLSkillRepository::mapRowToSkill(sql::ResultSet* resultSet) {
     EmployeeSkill skill;
     skill.skillId    = resultSet->getInt("skill_id");
     skill.employeeId = resultSet->getInt("employee_id");
-    skill.skillName  = resultSet->getString("skill_name").asStdString();
-    skill.category   = resultSet->getString("category").asStdString();
-    skill.proficiency= resultSet->getString("proficiency").asStdString();
+    skill.skillName  = resultSet->getString("skill_name");
+    skill.category   = resultSet->getString("category");
+    skill.proficiency= resultSet->getString("proficiency");
     return skill;
 }
 

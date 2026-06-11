@@ -10,13 +10,13 @@
 Project MySQLProjectRepository::mapRowToProject(sql::ResultSet* resultSet) {
     Project project;
     project.projectId   = resultSet->getInt("project_id");
-    project.name        = resultSet->getString("name").asStdString();
-    project.description = resultSet->getString("description").asStdString();
-    project.startDate   = resultSet->getString("start_date").asStdString();
-    project.endDate     = resultSet->getString("end_date").asStdString();
-    project.status      = resultSet->getString("status").asStdString();
+    project.name        = resultSet->getString("name");
+    project.description = resultSet->getString("description");
+    project.startDate   = resultSet->getString("start_date");
+    project.endDate     = resultSet->getString("end_date");
+    project.status      = resultSet->getString("status");
     project.managerId   = resultSet->getInt("manager_id");
-    project.health      = resultSet->getString("health").asStdString();
+    project.health      = resultSet->getString("health");
     return project;
 }
 

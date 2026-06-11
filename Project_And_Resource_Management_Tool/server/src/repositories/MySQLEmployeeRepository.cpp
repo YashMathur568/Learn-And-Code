@@ -12,11 +12,11 @@ Employee MySQLEmployeeRepository::mapRowToEmployee(sql::ResultSet* resultSet) {
     employee.employeeId  = resultSet->getInt("employee_id");
     employee.userId      = resultSet->getInt("user_id");
     employee.managerId   = resultSet->isNull("manager_id") ? 0 : resultSet->getInt("manager_id");
-    employee.fullName    = resultSet->getString("full_name").asStdString();
-    employee.email       = resultSet->getString("email").asStdString();
-    employee.department  = resultSet->getString("department").asStdString();
-    employee.designation = resultSet->getString("designation").asStdString();
-    employee.status      = resultSet->getString("status").asStdString();
+    employee.fullName    = resultSet->getString("full_name");
+    employee.email       = resultSet->getString("email");
+    employee.department  = resultSet->getString("department");
+    employee.designation = resultSet->getString("designation");
+    employee.status      = resultSet->getString("status");
     employee.isActive    = resultSet->getBoolean("is_active");
     return employee;
 }

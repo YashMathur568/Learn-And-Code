@@ -9,8 +9,8 @@
 
 SystemConfig MySQLConfigRepository::mapRowToConfig(sql::ResultSet* resultSet) {
     SystemConfig config;
-    config.configKey   = resultSet->getString("config_key").asStdString();
-    config.configValue = resultSet->getString("config_value").asStdString();
+    config.configKey   = resultSet->getString("config_key");
+    config.configValue = resultSet->getString("config_value");
     return config;
 }
 

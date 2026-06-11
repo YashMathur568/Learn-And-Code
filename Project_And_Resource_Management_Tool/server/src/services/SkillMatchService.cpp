@@ -107,7 +107,7 @@ std::vector<nlohmann::json> SkillMatchService::executeQuery(const std::string& s
     while (rs->next()) {
         nlohmann::json row;
         for (unsigned int col = 1; col <= colCount; ++col) {
-            const std::string colName = meta->getColumnName(col);
+            const std::string colName(meta->getColumnName(col).c_str());
             if (rs->isNull(col)) {
                 row[colName] = nullptr;
             } else {

@@ -1,73 +1,103 @@
 #include "PasswordUtil.hpp"
 #include "../utils/AppException.hpp"
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <crypt.h>
+#include <openssl/evp.h>
 #include <openssl/rand.h>
+#include <openssl/crypto.h>
 
 #include <cctype>
-#include <cstring>
 #include <iomanip>
 #include <sstream>
+#include <stdexcept>
 #include <string>
+#include <vector>
 
-static constexpr int    BCRYPT_WORK_FACTOR      = 12;
-static constexpr size_t BCRYPT_RANDOM_BYTE_COUNT = 16;
+// Hash format: "pbkdf2:sha256:<iterations>:<salt_hex>:<hash_hex>"
+static constexpr int PBKDF2_ITERATIONS = 100000;
+static constexpr int PBKDF2_SALT_BYTES = 16;
+static constexpr int PBKDF2_HASH_BYTES = 32;
 
-static std::string buildBcryptSalt(int workFactor) {
-    unsigned char randomBytes[BCRYPT_RANDOM_BYTE_COUNT];
-    if (RAND_bytes(randomBytes, static_cast<int>(BCRYPT_RANDOM_BYTE_COUNT)) != 1) {
-        throw AppException("Failed to generate random bytes for bcrypt salt.");
+static std::string toHex(const unsigned char* data, int len) {
+    std::ostringstream oss;
+    oss << std::hex << std::setfill('0');
+    for (int i = 0; i < len; i++) {
+        oss << std::setw(2) << static_cast<int>(data[i]);
     }
+    return oss.str();
+}
 
-    static constexpr char BASE64_ALPHABET[] =
-        "./ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-    std::string encoded;
-    encoded.reserve(22);
-    for (size_t index = 0; index < 16 && encoded.size() < 22; index += 3) {
-        unsigned int triplet = static_cast<unsigned int>(randomBytes[index]);
-        if (index + 1 < BCRYPT_RANDOM_BYTE_COUNT) triplet |= static_cast<unsigned int>(randomBytes[index + 1]) << 8;
-        if (index + 2 < BCRYPT_RANDOM_BYTE_COUNT) triplet |= static_cast<unsigned int>(randomBytes[index + 2]) << 16;
-
-        encoded += BASE64_ALPHABET[triplet & 0x3f];
-        if (encoded.size() < 22) encoded += BASE64_ALPHABET[(triplet >> 6)  & 0x3f];
-        if (encoded.size() < 22) encoded += BASE64_ALPHABET[(triplet >> 12) & 0x3f];
-        if (encoded.size() < 22) encoded += BASE64_ALPHABET[(triplet >> 18) & 0x3f];
+static bool fromHex(const std::string& hex, unsigned char* out, int expectedLen) {
+    if (static_cast<int>(hex.size()) != expectedLen * 2) return false;
+    for (int i = 0; i < expectedLen; i++) {
+        try {
+            out[i] = static_cast<unsigned char>(std::stoi(hex.substr(i * 2, 2), nullptr, 16));
+        } catch (...) {
+            return false;
+        }
     }
-    encoded.resize(22);
+    return true;
+}
 
-    std::ostringstream saltBuilder;
-    saltBuilder << "$2b$" << std::setw(2) << std::setfill('0') << workFactor << "$" << encoded;
-    return saltBuilder.str();
+static std::vector<std::string> splitBy(const std::string& str, char delim) {
+    std::vector<std::string> parts;
+    std::stringstream ss(str);
+    std::string part;
+    while (std::getline(ss, part, delim)) {
+        parts.push_back(part);
+    }
+    return parts;
 }
 
 std::string PasswordUtil::hash(const std::string& plainPassword) {
-    const std::string salt = buildBcryptSalt(BCRYPT_WORK_FACTOR);
-
-    struct crypt_data cryptData{};
-    cryptData.initialized = 0;
-
-    const char* result = crypt_r(plainPassword.c_str(), salt.c_str(), &cryptData);
-    if (result == nullptr || std::strncmp(result, "$2b$", 4) != 0) {
-        throw AppException("Password hashing failed.");
+    unsigned char salt[PBKDF2_SALT_BYTES];
+    if (RAND_bytes(salt, PBKDF2_SALT_BYTES) != 1) {
+        throw AppException("Failed to generate random salt for password hashing.");
     }
 
-    return std::string(result);
+    unsigned char hashOut[PBKDF2_HASH_BYTES];
+    PKCS5_PBKDF2_HMAC(
+        plainPassword.c_str(), static_cast<int>(plainPassword.size()),
+        salt, PBKDF2_SALT_BYTES,
+        PBKDF2_ITERATIONS,
+        EVP_sha256(),
+        PBKDF2_HASH_BYTES, hashOut
+    );
+
+    return std::string("pbkdf2:sha256:")
+        + std::to_string(PBKDF2_ITERATIONS) + ":"
+        + toHex(salt, PBKDF2_SALT_BYTES) + ":"
+        + toHex(hashOut, PBKDF2_HASH_BYTES);
 }
 
 bool PasswordUtil::verify(const std::string& plainPassword, const std::string& storedHash) {
-    struct crypt_data cryptData{};
-    cryptData.initialized = 0;
-
-    const char* result = crypt_r(plainPassword.c_str(), storedHash.c_str(), &cryptData);
-    if (result == nullptr) {
+    const auto parts = splitBy(storedHash, ':');
+    if (parts.size() != 5 || parts[0] != "pbkdf2" || parts[1] != "sha256") {
         return false;
     }
 
-    return storedHash == std::string(result);
+    int iterations = 0;
+    try {
+        iterations = std::stoi(parts[2]);
+    } catch (...) {
+        return false;
+    }
+
+    unsigned char salt[PBKDF2_SALT_BYTES];
+    unsigned char storedBytes[PBKDF2_HASH_BYTES];
+    if (!fromHex(parts[3], salt, PBKDF2_SALT_BYTES))     return false;
+    if (!fromHex(parts[4], storedBytes, PBKDF2_HASH_BYTES)) return false;
+
+    unsigned char computed[PBKDF2_HASH_BYTES];
+    PKCS5_PBKDF2_HMAC(
+        plainPassword.c_str(), static_cast<int>(plainPassword.size()),
+        salt, PBKDF2_SALT_BYTES,
+        iterations,
+        EVP_sha256(),
+        PBKDF2_HASH_BYTES, computed
+    );
+
+    // Constant-time comparison prevents timing attacks
+    return CRYPTO_memcmp(computed, storedBytes, PBKDF2_HASH_BYTES) == 0;
 }
 
 bool PasswordUtil::meetsStrengthPolicy(const std::string& password) {
