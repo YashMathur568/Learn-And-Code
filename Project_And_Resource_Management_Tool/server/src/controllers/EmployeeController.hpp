@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../services/IEmployeeService.hpp"
+#include "../repositories/IAllocationRepository.hpp"
 #include <drogon/HttpController.h>
 #include <memory>
 
@@ -17,6 +18,7 @@ public:
         ADD_METHOD_TO(EmployeeController::addSkill,          "/api/admin/employees/{id}/skills",              drogon::Post,   "JwtMiddleware");
         ADD_METHOD_TO(EmployeeController::updateSkill,       "/api/admin/employees/{id}/skills/{skillId}",    drogon::Put,    "JwtMiddleware");
         ADD_METHOD_TO(EmployeeController::removeSkill,       "/api/admin/employees/{id}/skills/{skillId}",    drogon::Delete, "JwtMiddleware");
+        ADD_METHOD_TO(EmployeeController::restoreAccess,     "/api/admin/employees/{id}/restore-access",       drogon::Put,    "JwtMiddleware");
     METHOD_LIST_END
 
     void getAllEmployees(
@@ -68,6 +70,13 @@ public:
         int skillId
     );
 
+    void restoreAccess(
+        const drogon::HttpRequestPtr& request,
+        std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+        int id
+    );
+
 private:
-    std::shared_ptr<IEmployeeService> employeeService;
+    std::shared_ptr<IEmployeeService>    employeeService;
+    std::shared_ptr<IAllocationRepository> allocationRepository;
 };

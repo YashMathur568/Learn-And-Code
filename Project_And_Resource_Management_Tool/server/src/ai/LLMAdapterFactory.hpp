@@ -4,7 +4,7 @@
 #include "../utils/ConfigLoader.hpp"
 #include "GeminiAdapter.hpp"
 #include "GroqAdapter.hpp"
-#include "CompanyAdapter.hpp"
+#include "GemmaAdapter.hpp"
 
 #include <memory>
 #include <stdexcept>
@@ -24,7 +24,7 @@ public:
         }
 
         if (provider == "company") {
-            return std::make_shared<CompanyAdapter>(
+            return std::make_shared<GemmaAdapter>(
                 config.llm.companyHost, config.llm.apiKey, config.llm.companyModel);
         }
 

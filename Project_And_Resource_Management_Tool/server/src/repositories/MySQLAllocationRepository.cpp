@@ -12,6 +12,7 @@ Allocation MySQLAllocationRepository::mapRowToAllocation(sql::ResultSet* resultS
     allocation.allocationId = resultSet->getInt("allocation_id");
     allocation.userId       = resultSet->getInt("user_id");
     allocation.projectId    = resultSet->getInt("project_id");
+    allocation.projectName  = resultSet->getString("project_name");
     allocation.utilisation  = resultSet->getInt("utilisation");
     allocation.fromDate     = resultSet->getString("from_date");
     allocation.toDate       = resultSet->getString("to_date");
@@ -20,14 +21,15 @@ Allocation MySQLAllocationRepository::mapRowToAllocation(sql::ResultSet* resultS
 }
 
 static const std::string ALLOC_SELECT =
-    "SELECT allocation_id, user_id, project_id, utilisation, from_date, `to_date`, is_active "
-    "FROM allocations ";
+    "SELECT a.allocation_id, a.user_id, a.project_id, p.name AS project_name, "
+    "a.utilisation, a.from_date, a.`to_date`, a.is_active "
+    "FROM allocations a JOIN projects p ON p.project_id = a.project_id ";
 
 std::optional<Allocation> MySQLAllocationRepository::findById(int allocationId) {
     try {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
-            connection->prepareStatement(ALLOC_SELECT + "WHERE allocation_id = ?")
+            connection->prepareStatement(ALLOC_SELECT + "WHERE a.allocation_id = ?")
         );
         statement->setInt(1, allocationId);
         std::unique_ptr<sql::ResultSet> resultSet(statement->executeQuery());
@@ -44,7 +46,7 @@ std::vector<Allocation> MySQLAllocationRepository::findByUserId(int userId) {
     try {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
-            connection->prepareStatement(ALLOC_SELECT + "WHERE user_id = ? ORDER BY from_date DESC")
+            connection->prepareStatement(ALLOC_SELECT + "WHERE a.user_id = ? ORDER BY a.from_date DESC")
         );
         statement->setInt(1, userId);
         std::unique_ptr<sql::ResultSet> resultSet(statement->executeQuery());
@@ -63,7 +65,7 @@ std::vector<Allocation> MySQLAllocationRepository::findActiveByUserId(int userId
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                ALLOC_SELECT + "WHERE user_id = ? AND is_active = 1 AND `to_date` >= CURDATE() ORDER BY from_date"
+                ALLOC_SELECT + "WHERE a.user_id = ? AND a.is_active = 1 AND a.`to_date` >= CURDATE() ORDER BY a.from_date"
             )
         );
         statement->setInt(1, userId);
@@ -83,7 +85,7 @@ std::vector<Allocation> MySQLAllocationRepository::findActiveByProjectId(int pro
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                ALLOC_SELECT + "WHERE project_id = ? AND is_active = 1 AND `to_date` >= CURDATE() ORDER BY user_id"
+                ALLOC_SELECT + "WHERE a.project_id = ? AND a.is_active = 1 AND a.`to_date` >= CURDATE() ORDER BY a.user_id"
             )
         );
         statement->setInt(1, projectId);

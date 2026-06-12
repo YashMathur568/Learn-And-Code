@@ -10,6 +10,15 @@ struct DatabaseConfig {
     std::string password;
 };
 
+struct EmailConfig {
+    bool        enabled{false};
+    std::string smtpHost;
+    int         smtpPort{587};
+    std::string username;
+    std::string password;
+    std::string fromAddress;
+};
+
 struct LlmConfig {
     std::string provider;
     std::string apiKey;
@@ -22,6 +31,7 @@ struct LlmConfig {
 struct AppConfig {
     DatabaseConfig database;
     LlmConfig      llm;
+    EmailConfig    email;
     int            schedulerIntervalHours{4};
     int            maxWeeklyHours{40};
     int            serverPort{8080};

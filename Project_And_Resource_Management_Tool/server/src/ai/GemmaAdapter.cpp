@@ -1,4 +1,4 @@
-#include "CompanyAdapter.hpp"
+#include "GemmaAdapter.hpp"
 #include "../utils/AppException.hpp"
 
 #include <nlohmann/json.hpp>
@@ -10,7 +10,7 @@ static size_t companyWriteCallback(void* contents, size_t size, size_t nmemb, st
     return size * nmemb;
 }
 
-CompanyAdapter::CompanyAdapter(
+GemmaAdapter::GemmaAdapter(
     const std::string& host,
     const std::string& apiKey,
     const std::string& model)
@@ -18,7 +18,7 @@ CompanyAdapter::CompanyAdapter(
     , apiKey_(apiKey)
     , model_(model) {}
 
-std::string CompanyAdapter::generate(const std::string& prompt) {
+std::string GemmaAdapter::generate(const std::string& prompt) {
     const std::string url = host_ + "/api/generate";
 
     const nlohmann::json requestBody = {
@@ -38,6 +38,7 @@ std::string CompanyAdapter::generate(const std::string& prompt) {
     struct curl_slist* headers = nullptr;
     headers = curl_slist_append(headers, "Content-Type: application/json");
     headers = curl_slist_append(headers, apikeyHeader.c_str());
+
 
     curl_easy_setopt(curl, CURLOPT_URL,            url.c_str());
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS,     requestStr.c_str());

@@ -24,18 +24,20 @@ static void viewAllEmployees(const ApiClient& api) {
                   << ConsoleUtil::col("Role",     10)
                   << ConsoleUtil::col("Name",     22)
                   << ConsoleUtil::col("Department", 14)
-                  << "Status\n";
+                  << ConsoleUtil::col("Status", 12)
+                  << "Frozen\n";
         ConsoleUtil::printSeparator();
 
         int activeCount = 0, inactiveCount = 0;
         for (const auto& emp : data) {
             if (emp.value("isActive", true)) ++activeCount; else ++inactiveCount;
-
+            const bool frozen = emp.value("isFrozen", false);
             std::cout << ConsoleUtil::col(std::to_string(emp.value("userId", 0)), 6)
                       << ConsoleUtil::col(emp.value("role", ""), 10)
                       << ConsoleUtil::col(emp.value("fullName", ""), 22)
                       << ConsoleUtil::col(emp.value("department", ""), 14)
-                      << emp.value("status", "") << "\n";
+                      << ConsoleUtil::col(emp.value("status", ""), 12)
+                      << (frozen ? "[FROZEN]" : "") << "\n";
         }
         ConsoleUtil::printSeparator();
         std::cout << "Total: " << data.size()
@@ -175,7 +177,18 @@ static void deactivateEmployee(const ApiClient& api) {
     const std::string name = found.value("fullName", "");
     std::cout << "\n── " << name << " ──\n";
     std::cout << "Department : " << found.value("department", "") << "\n";
-    std::cout << "Status     : " << found.value("status", "") << "\n\n";
+    std::cout << "Status     : " << found.value("status", "") << "\n";
+
+    const auto& allocations = found.value("allocations", nlohmann::json::array());
+    if (!allocations.empty()) {
+        std::cout << "\nActive Allocations:\n";
+        for (const auto& alloc : allocations) {
+            std::cout << "  • " << alloc.value("projectName", "")
+                      << "  (" << alloc.value("allocationPercentage", 0) << "% | "
+                      << alloc.value("fromDate", "") << " → " << alloc.value("toDate", "") << ")\n";
+        }
+    }
+    std::cout << "\n";
     ConsoleUtil::printWarning("This will end all active allocations and block login.");
 
     if (!ConsoleUtil::confirm("Deactivate " + name + "?")) {
@@ -432,6 +445,49 @@ static void manageSkills(const ApiClient& api) {
     }
 }
 
+// ── Restore timesheet access ──────────────────────────────────────────────────
+static void restoreTimesheetAccess(const ApiClient& api) {
+    ConsoleUtil::clearScreen();
+    ConsoleUtil::printHeader("RESTORE TIMESHEET ACCESS");
+
+    const auto respAll = api.get("/api/admin/employees", AppSession::get().token);
+    if (!respAll.success) { ConsoleUtil::printError(respAll.errorMessage); ConsoleUtil::pause(); return; }
+
+    const auto& allEmps = respAll.body.value("data", nlohmann::json::array());
+
+    std::cout << ConsoleUtil::col("ID",   6)
+              << ConsoleUtil::col("Name", 26)
+              << "Frozen\n";
+    ConsoleUtil::printSeparator();
+    bool anyFrozen = false;
+    for (const auto& emp : allEmps) {
+        const bool frozen = emp.value("isFrozen", false);
+        if (!frozen) continue;
+        anyFrozen = true;
+        std::cout << ConsoleUtil::col(std::to_string(emp.value("userId", 0)), 6)
+                  << ConsoleUtil::col(emp.value("fullName", ""), 26)
+                  << "[FROZEN]\n";
+    }
+    if (!anyFrozen) {
+        ConsoleUtil::printInfo("No employees have frozen timesheet access.");
+        ConsoleUtil::pause();
+        return;
+    }
+    ConsoleUtil::printSeparator();
+
+    const std::string idStr = ConsoleUtil::promptInput("Employee ID to restore (B to go back): ");
+    if (idStr.empty() || idStr == "b" || idStr == "B") return;
+    try { std::stoi(idStr); } catch (...) {
+        ConsoleUtil::printError("Please enter a numeric ID.");
+        ConsoleUtil::pause(); return;
+    }
+
+    const auto resp = api.put("/api/admin/employees/" + idStr + "/restore-access", {}, AppSession::get().token);
+    if (!resp.success) ConsoleUtil::printError(resp.errorMessage);
+    else               ConsoleUtil::printSuccess("Timesheet access restored.");
+    ConsoleUtil::pause();
+}
+
 // ── Main employee menu ────────────────────────────────────────────────────────
 void showAdminEmployeeMenu(const ApiClient& api) {
     while (true) {
@@ -444,7 +500,8 @@ void showAdminEmployeeMenu(const ApiClient& api) {
                   << "4. Reactivate Employee\n"
                   << "5. Manage Employee Skills\n"
                   << "6. Assign Manager\n"
-                  << "7. Back\n"
+                  << "7. Restore Timesheet Access\n"
+                  << "8. Back\n"
                   << "\nEnter option: ";
 
         std::string opt;
@@ -456,6 +513,7 @@ void showAdminEmployeeMenu(const ApiClient& api) {
         else if (opt == "4") reactivateEmployee(api);
         else if (opt == "5") manageSkills(api);
         else if (opt == "6") assignManager(api);
-        else if (opt == "7" || opt == "b" || opt == "B") return;
+        else if (opt == "7") restoreTimesheetAccess(api);
+        else if (opt == "8" || opt == "b" || opt == "B") return;
     }
 }

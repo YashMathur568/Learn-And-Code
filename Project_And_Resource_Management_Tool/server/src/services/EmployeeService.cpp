@@ -1,5 +1,4 @@
 #include "EmployeeService.hpp"
-#include "../repositories/MySQLAllocationRepository.hpp"
 #include "../utils/AppException.hpp"
 
 #include <algorithm>
@@ -124,6 +123,16 @@ EmployeeSkill EmployeeService::addSkill(int userId, const SkillRequest& request)
     }
 
     validateSkillFields(request);
+
+    const auto existingSkills = skillRepository->findByUserId(userId);
+    for (const auto& s : existingSkills) {
+        if (s.skillName == request.skillName) {
+            throw ValidationException(
+                "'" + request.skillName + "' is already added. "
+                "Use Update Skill to change the proficiency level."
+            );
+        }
+    }
 
     EmployeeSkill skill;
     skill.userId      = userId;

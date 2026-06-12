@@ -6,6 +6,7 @@ struct Allocation {
     int         allocationId{0};
     int         userId{0};
     int         projectId{0};
+    std::string projectName;
     int         utilisation{0};
     std::string fromDate;
     std::string toDate;

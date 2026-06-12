@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ISchedulerService.hpp"
+#include "NotificationService.hpp"
 #include "../repositories/IEmployeeRepository.hpp"
 #include "../repositories/IAllocationRepository.hpp"
 #include "../repositories/IProjectRepository.hpp"
@@ -19,6 +20,7 @@ public:
         std::shared_ptr<IProjectRepository>    projectRepository,
         std::shared_ptr<IMilestoneRepository>  milestoneRepository,
         std::shared_ptr<ITimesheetRepository>  timesheetRepository,
+        std::shared_ptr<NotificationService>   notificationService,
         int                                    intervalHours
     );
 
@@ -43,6 +45,7 @@ private:
     std::shared_ptr<IProjectRepository>    projectRepository_;
     std::shared_ptr<IMilestoneRepository>  milestoneRepository_;
     std::shared_ptr<ITimesheetRepository>  timesheetRepository_;
+    std::shared_ptr<NotificationService>   notificationService_;
 
     int              intervalHours_;
     std::thread      thread_;

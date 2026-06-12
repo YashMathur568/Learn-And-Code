@@ -22,7 +22,7 @@ static const std::vector<std::string> ALLOWED_TABLES = {
 std::string SqlValidator::normalize(const std::string& sql) {
     std::string result = sql;
     std::transform(result.begin(), result.end(), result.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
+                   [](unsigned char ch) { return std::tolower(ch); });
     return result;
 }
 
@@ -43,8 +43,8 @@ bool SqlValidator::containsBlockedKeyword(const std::string& normalizedSql) {
 
 bool SqlValidator::hasStackedQueries(const std::string& sql) {
     size_t semicolonCount = 0;
-    for (char c : sql) {
-        if (c == ';') {
+    for (char ch : sql) {
+        if (ch == ';') {
             ++semicolonCount;
         }
     }

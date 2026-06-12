@@ -56,13 +56,14 @@ struct TimesheetWithEntries {
 
 inline nlohmann::json allocationToJson(const Allocation& allocation) {
     return {
-        {"allocationId",       allocation.allocationId},
-        {"userId",             allocation.userId},
-        {"projectId",         allocation.projectId},
+        {"allocationId",         allocation.allocationId},
+        {"userId",               allocation.userId},
+        {"projectId",            allocation.projectId},
+        {"projectName",          allocation.projectName},
         {"allocationPercentage", allocation.utilisation},
-        {"fromDate",          allocation.fromDate},
-        {"toDate",            allocation.toDate},
-        {"isActive",          allocation.isActive}
+        {"fromDate",             allocation.fromDate},
+        {"toDate",               allocation.toDate},
+        {"isActive",             allocation.isActive}
     };
 }
 

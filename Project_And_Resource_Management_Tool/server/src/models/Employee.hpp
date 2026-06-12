@@ -12,4 +12,5 @@ struct Employee {
     std::string designation;
     std::string status;
     bool        isActive{true};
+    bool        isFrozen{false};
 };

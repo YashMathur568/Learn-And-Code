@@ -41,7 +41,7 @@ private:
     static std::string extractJsonArray(const std::string& raw);
     static int         proficiencyWeight(const std::string& p);
     static std::string skillWhereClause(const std::vector<std::string>& skills);
-    static std::string escapeSql(const std::string& s);
+    static std::string escapeSql(const std::string& input);
 
     std::shared_ptr<ILLMAdapter> llmAdapter_;
 };

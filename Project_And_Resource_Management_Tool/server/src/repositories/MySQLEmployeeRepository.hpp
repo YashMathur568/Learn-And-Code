@@ -21,6 +21,8 @@ public:
     void                    setStatus(int userId,
                                       const std::string& status)         override;
     void                    assignManager(int userId, int managerUserId) override;
+    void                    setFrozen(int userId, bool frozen)           override;
+    bool                    isFrozen(int userId)                        override;
     bool                    hasActiveAllocations(int userId)             override;
     bool                    existsByUserId(int userId)                   override;
 

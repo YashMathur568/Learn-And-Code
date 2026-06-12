@@ -20,6 +20,8 @@ public:
                                               const std::string& status)         = 0;
     virtual void                    assignManager(int userId,
                                                   int managerUserId)             = 0;
-    virtual bool                    hasActiveAllocations(int userId)             = 0;
-    virtual bool                    existsByUserId(int userId)                   = 0;
+    virtual void                    setFrozen(int userId, bool frozen)            = 0;
+    virtual bool                    isFrozen(int userId)                         = 0;
+    virtual bool                    hasActiveAllocations(int userId)              = 0;
+    virtual bool                    existsByUserId(int userId)                    = 0;
 };

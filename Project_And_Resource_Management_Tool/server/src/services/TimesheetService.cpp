@@ -53,6 +53,11 @@ bool TimesheetService::isWeekInFuture(const std::string& weekStart) {
 }
 
 TimesheetWithEntries TimesheetService::submitTimesheet(int userId, const SubmitTimesheetRequest& request) {
+    // Check if account is frozen
+    if (employeeRepository->isFrozen(userId)) {
+        throw ValidationException("Your timesheet submission access has been frozen due to missed submissions. Contact your manager to restore access.");
+    }
+
     if (request.entries.empty()) {
         throw ValidationException("Timesheet must contain at least one entry.");
     }
@@ -64,9 +69,10 @@ TimesheetWithEntries TimesheetService::submitTimesheet(int userId, const SubmitT
     }
 
     const auto existing = timesheetRepository->findByUserAndWeek(userId, request.weekStart);
-    if (existing.has_value()) {
+    if (existing.has_value() && existing->status == "SUBMITTED") {
         throw ConflictException("A timesheet for this week has already been submitted.");
     }
+    // If existing status is MISSED, we allow retroactive submission (replaces it)
 
     int totalHours = 0;
     for (const auto& entryRequest : request.entries) {
@@ -93,12 +99,18 @@ TimesheetWithEntries TimesheetService::submitTimesheet(int userId, const SubmitT
         );
     }
 
-    Timesheet timesheet;
-    timesheet.userId    = userId;
-    timesheet.weekStart = request.weekStart;
-    timesheet.status    = "SUBMITTED";
-
-    const int timesheetId = timesheetRepository->create(timesheet);
+    // If a MISSED record exists, update it in-place; otherwise create fresh
+    int timesheetId = 0;
+    if (existing.has_value() && existing->status == "MISSED") {
+        timesheetId = existing->timesheetId;
+        timesheetRepository->updateStatus(timesheetId, "SUBMITTED");
+    } else {
+        Timesheet timesheet;
+        timesheet.userId    = userId;
+        timesheet.weekStart = request.weekStart;
+        timesheet.status    = "SUBMITTED";
+        timesheetId = timesheetRepository->create(timesheet);
+    }
 
     TimesheetWithEntries result;
     result.timesheet = timesheetRepository->findById(timesheetId).value();

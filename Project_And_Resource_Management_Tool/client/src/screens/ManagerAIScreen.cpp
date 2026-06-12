@@ -138,9 +138,9 @@ static void teamBuilderScreen(const ApiClient& api) {
     int filled = 0;
     int total  = static_cast<int>(roles.size());
 
-    for (int i = 0; i < total; ++i) {
-        const auto& role = roles[i];
-        const std::string roleName = role.value("roleName", "Role " + std::to_string(i + 1));
+    for (int idx = 0; idx < total; ++idx) {
+        const auto& role = roles[idx];
+        const std::string roleName = role.value("roleName", "Role " + std::to_string(idx + 1));
 
         if (role.value("filled", false)) {
             ++filled;

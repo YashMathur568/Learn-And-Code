@@ -20,12 +20,12 @@ TeamBuilderService::TeamBuilderService(std::shared_ptr<ILLMAdapter> llmAdapter)
 // Helpers
 // ─────────────────────────────────────────────────────────
 
-std::string TeamBuilderService::escapeSql(const std::string& s) {
+std::string TeamBuilderService::escapeSql(const std::string& input) {
     std::string out;
-    out.reserve(s.size());
-    for (char c : s) {
-        if (c == '\'') out += "''";
-        else           out += c;
+    out.reserve(input.size());
+    for (char ch : input) {
+        if (ch == '\'') out += "''";
+        else            out += ch;
     }
     return out;
 }
@@ -39,9 +39,9 @@ int TeamBuilderService::proficiencyWeight(const std::string& p) {
 // Builds: LOWER(s.skill_name) LIKE '%java%' OR LOWER(s.skill_name) LIKE '%spring%'
 std::string TeamBuilderService::skillWhereClause(const std::vector<std::string>& skills) {
     std::ostringstream clause;
-    for (size_t i = 0; i < skills.size(); ++i) {
-        if (i > 0) clause << " OR ";
-        clause << "LOWER(s.skill_name) LIKE '%" << escapeSql(skills[i]) << "%'";
+    for (size_t idx = 0; idx < skills.size(); ++idx) {
+        if (idx > 0) clause << " OR ";
+        clause << "LOWER(s.skill_name) LIKE '%" << escapeSql(skills[idx]) << "%'";
     }
     return clause.str();
 }
@@ -226,9 +226,9 @@ std::string TeamBuilderService::buildGapReason(const RoleRequirement& role) {
     if (found.empty()) {
         // Build a comma-separated list of the primary skills
         std::string skillList;
-        for (size_t i = 0; i < role.skills.size() && i < 3; ++i) {
-            if (i > 0) skillList += ", ";
-            skillList += role.skills[i];
+        for (size_t idx = 0; idx < role.skills.size() && idx < 3; ++idx) {
+            if (idx > 0) skillList += ", ";
+            skillList += role.skills[idx];
         }
         return "Skill '" + skillList + "' not found in company — consider hiring or training.";
     }

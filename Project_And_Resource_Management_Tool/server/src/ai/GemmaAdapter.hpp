@@ -3,9 +3,9 @@
 #include "ILLMAdapter.hpp"
 #include <string>
 
-class CompanyAdapter : public ILLMAdapter {
+class GemmaAdapter : public ILLMAdapter {
 public:
-    CompanyAdapter(const std::string& host, const std::string& apiKey, const std::string& model);
+    GemmaAdapter(const std::string& host, const std::string& apiKey, const std::string& model);
     std::string generate(const std::string& prompt) override;
 
 private:

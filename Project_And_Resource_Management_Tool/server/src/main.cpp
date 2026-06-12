@@ -16,6 +16,9 @@
 #include "controllers/EmployeeApiController.hpp"
 #include "controllers/AIController.hpp"
 #include "services/SchedulerService.hpp"
+#include "services/NotificationService.hpp"
+#include "email/EmailService.hpp"
+#include "ai/GemmaAdapter.hpp"
 #include "repositories/MySQLEmployeeRepository.hpp"
 #include "repositories/MySQLAllocationRepository.hpp"
 #include "repositories/MySQLProjectRepository.hpp"
@@ -36,12 +39,31 @@ int main() {
             appConfig.database.password
         );
 
+        auto employeeRepo    = std::make_shared<MySQLEmployeeRepository>();
+        auto allocationRepo  = std::make_shared<MySQLAllocationRepository>();
+        auto projectRepo     = std::make_shared<MySQLProjectRepository>();
+        auto milestoneRepo   = std::make_shared<MySQLMilestoneRepository>();
+        auto timesheetRepo   = std::make_shared<MySQLTimesheetRepository>();
+
+        auto emailSvc  = std::make_shared<EmailService>(appConfig.email);
+        auto llmAdapter = std::make_shared<GemmaAdapter>(appConfig.llm.companyHost, appConfig.llm.apiKey, appConfig.llm.companyModel);
+        auto notifSvc  = std::make_shared<NotificationService>(
+            emailSvc,
+            employeeRepo,
+            timesheetRepo,
+            projectRepo,
+            milestoneRepo,
+            allocationRepo,
+            llmAdapter
+        );
+
         SchedulerService scheduler(
-            std::make_shared<MySQLEmployeeRepository>(),
-            std::make_shared<MySQLAllocationRepository>(),
-            std::make_shared<MySQLProjectRepository>(),
-            std::make_shared<MySQLMilestoneRepository>(),
-            std::make_shared<MySQLTimesheetRepository>(),
+            employeeRepo,
+            allocationRepo,
+            projectRepo,
+            milestoneRepo,
+            timesheetRepo,
+            notifSvc,
             appConfig.schedulerIntervalHours
         );
         scheduler.start();

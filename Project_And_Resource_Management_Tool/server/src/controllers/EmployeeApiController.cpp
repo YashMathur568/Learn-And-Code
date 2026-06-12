@@ -23,7 +23,34 @@ EmployeeApiController::EmployeeApiController()
           std::make_shared<MySQLAllocationRepository>(),
           std::make_shared<MySQLEmployeeRepository>()
       )),
-      projectRepository(std::make_shared<MySQLProjectRepository>()) {}
+      projectRepository(std::make_shared<MySQLProjectRepository>()),
+      employeeRepository(std::make_shared<MySQLEmployeeRepository>()) {}
+
+void EmployeeApiController::getMe(
+    const drogon::HttpRequestPtr& request,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback
+) {
+    try {
+        const auto claims = RoleGuard::extractClaims(request);
+        const auto emp    = employeeRepository->findById(claims.userId);
+        if (!emp.has_value()) {
+            throw NotFoundException("Employee profile not found.");
+        }
+        callback(ResponseBuilder::success({
+            {"userId",   emp->userId},
+            {"fullName", emp->fullName},
+            {"isFrozen", emp->isFrozen},
+            {"status",   emp->status},
+            {"role",     emp->role}
+        }));
+    } catch (const UnauthorizedException& ex) {
+        callback(ResponseBuilder::error(ex.what(), drogon::k403Forbidden));
+    } catch (const NotFoundException& ex) {
+        callback(ResponseBuilder::error(ex.what(), drogon::k404NotFound));
+    } catch (const AppException& ex) {
+        callback(ResponseBuilder::error(ex.what(), drogon::k500InternalServerError));
+    }
+}
 
 void EmployeeApiController::getMyAllocations(
     const drogon::HttpRequestPtr& request,

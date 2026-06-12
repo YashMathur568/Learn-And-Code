@@ -102,7 +102,8 @@ inline nlohmann::json employeeToJson(const Employee& employee) {
         {"department",  employee.department},
         {"designation", employee.designation},
         {"status",      employee.status},
-        {"isActive",    employee.isActive}
+        {"isActive",    employee.isActive},
+        {"isFrozen",    employee.isFrozen}
     };
     if (employee.managerId > 0) {
         json["managerId"] = employee.managerId;

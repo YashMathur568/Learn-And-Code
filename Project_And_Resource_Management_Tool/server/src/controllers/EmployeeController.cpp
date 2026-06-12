@@ -17,19 +17,30 @@ EmployeeController::EmployeeController()
           std::make_shared<MySQLUserRepository>(),
           std::make_shared<MySQLSkillRepository>(),
           std::make_shared<MySQLAllocationRepository>()
-      )) {}
+      )),
+      allocationRepository(std::make_shared<MySQLAllocationRepository>()) {}
 
 void EmployeeController::getAllEmployees(
     const drogon::HttpRequestPtr& request,
     std::function<void(const drogon::HttpResponsePtr&)>&& callback
 ) {
     try {
-        RoleGuard::requireRole(request, "ADMIN");
+        RoleGuard::requireAnyRole(request, {"ADMIN", "MANAGER"});
 
         const auto employees = employeeService->getAllEmployees();
         nlohmann::json dataArray = nlohmann::json::array();
         for (const auto& employee : employees) {
-            dataArray.push_back(employeeToJson(employee));
+            nlohmann::json empJson = employeeToJson(employee);
+            if (employee.status == "ALLOCATED") {
+                const auto allocations = allocationRepository->findActiveByUserId(employee.userId);
+                nlohmann::json allocArray = nlohmann::json::array();
+                for (const auto& alloc : allocations)
+                    allocArray.push_back(allocationToJson(alloc));
+                empJson["allocations"] = allocArray;
+            } else {
+                empJson["allocations"] = nlohmann::json::array();
+            }
+            dataArray.push_back(empJson);
         }
         callback(ResponseBuilder::success({{"data", dataArray}}));
 
@@ -222,6 +233,31 @@ void EmployeeController::removeSkill(
         nlohmann::json dataArray = nlohmann::json::array();
         for (const auto& skill : remainingSkills) { dataArray.push_back(skillToJson(skill)); }
         callback(ResponseBuilder::success({{"data", dataArray}}));
+
+    } catch (const UnauthorizedException& ex) {
+        callback(ResponseBuilder::error(ex.what(), drogon::k403Forbidden));
+    } catch (const NotFoundException& ex) {
+        callback(ResponseBuilder::error(ex.what(), drogon::k404NotFound));
+    } catch (const AppException& ex) {
+        callback(ResponseBuilder::error(ex.what(), drogon::k500InternalServerError));
+    }
+}
+
+void EmployeeController::restoreAccess(
+    const drogon::HttpRequestPtr& request,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+    int employeeId
+) {
+    try {
+        const auto claims = RoleGuard::extractClaims(request);
+        if (claims.role != "ADMIN" && claims.role != "MANAGER") {
+            throw UnauthorizedException("Only ADMIN or MANAGER can restore access.");
+        }
+
+        auto empRepo = std::make_shared<MySQLEmployeeRepository>();
+        empRepo->setFrozen(employeeId, false);
+
+        callback(ResponseBuilder::success({{"message", "Access restored successfully."}}));
 
     } catch (const UnauthorizedException& ex) {
         callback(ResponseBuilder::error(ex.what(), drogon::k403Forbidden));

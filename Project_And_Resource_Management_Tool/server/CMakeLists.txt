@@ -106,3 +106,10 @@ file(COPY "${CMAKE_SOURCE_DIR}/config.json" DESTINATION "${CMAKE_CURRENT_BINARY_
 
 # Create logs directory for Drogon
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/logs")
+
+# ── Unit tests ─────────────────────────────────────────────────────────────────
+option(BUILD_TESTS "Build unit tests" ON)
+if(BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()

@@ -117,6 +117,27 @@ std::vector<Timesheet> MySQLTimesheetRepository::findByManagerTeam(
     }
 }
 
+std::vector<Timesheet> MySQLTimesheetRepository::findMissedForWeek(const std::string& weekStart) {
+    try {
+        auto connection = DatabasePool::getInstance().acquire();
+        std::unique_ptr<sql::PreparedStatement> statement(
+            connection->prepareStatement(
+                "SELECT timesheet_id, user_id, week_start, status, submitted_at "
+                "FROM timesheets WHERE week_start = ? AND status = 'MISSED'"
+            )
+        );
+        statement->setString(1, weekStart);
+        std::unique_ptr<sql::ResultSet> resultSet(statement->executeQuery());
+        std::vector<Timesheet> timesheets;
+        while (resultSet->next()) {
+            timesheets.push_back(mapRowToTimesheet(resultSet.get()));
+        }
+        return timesheets;
+    } catch (const sql::SQLException& sqlException) {
+        throw AppException(std::string("DB error in findMissedForWeek: ") + sqlException.what());
+    }
+}
+
 int MySQLTimesheetRepository::create(const Timesheet& timesheet) {
     try {
         auto connection = DatabasePool::getInstance().acquire();
@@ -195,6 +216,22 @@ void MySQLTimesheetRepository::createMissed(int userId, const std::string& weekS
         statement->executeUpdate();
     } catch (const sql::SQLException& sqlException) {
         throw AppException(std::string("DB error in createMissed: ") + sqlException.what());
+    }
+}
+
+void MySQLTimesheetRepository::updateStatus(int timesheetId, const std::string& status) {
+    try {
+        auto connection = DatabasePool::getInstance().acquire();
+        std::unique_ptr<sql::PreparedStatement> statement(
+            connection->prepareStatement(
+                "UPDATE timesheets SET status = ?, submitted_at = NOW() WHERE timesheet_id = ?"
+            )
+        );
+        statement->setString(1, status);
+        statement->setInt(2, timesheetId);
+        statement->executeUpdate();
+    } catch (const sql::SQLException& sqlException) {
+        throw AppException(std::string("DB error in updateStatus: ") + sqlException.what());
     }
 }
 

@@ -83,6 +83,20 @@ void showSubmitTimesheet(const ApiClient& api) {
 
     std::cout << "\nChecking your active allocations for " << ConsoleUtil::fmtDate(weekStart) << "...\n";
 
+    // Check frozen status before doing anything else
+    const auto empResp = api.get("/api/employee/me", AppSession::get().token);
+    if (empResp.success) {
+        const auto& empData = empResp.body.contains("data") ? empResp.body["data"] : empResp.body;
+        if (empData.value("isFrozen", false)) {
+            ConsoleUtil::printError(
+                "Your timesheet submission access has been frozen due to missed submissions.\n"
+                "  Contact your manager to restore access."
+            );
+            ConsoleUtil::pause();
+            return;
+        }
+    }
+
     const auto allocResp = api.get("/api/employee/allocations", AppSession::get().token);
     if (!allocResp.success) { ConsoleUtil::printError(allocResp.errorMessage); ConsoleUtil::pause(); return; }
 
@@ -195,68 +209,114 @@ void showSubmitTimesheet(const ApiClient& api) {
     ConsoleUtil::pause();
 }
 
-void showMyTimesheets(const ApiClient& api) {
+// ── shared: render detail for a single timesheet entry ───────────────────────
+static void showWeekDetail(const nlohmann::json& ts) {
+    ConsoleUtil::clearScreen();
+    std::cout << "\u2500\u2500 Week: " << ConsoleUtil::fmtDate(ts.value("weekStart", ""))
+              << "  \u2014  Status: " << ts.value("status", "") << " \u2500\u2500\n\n";
+
+    std::cout << ConsoleUtil::col("Project",  24)
+              << ConsoleUtil::col("Hrs",       6)
+              << "Activity Tags\n";
+    ConsoleUtil::printSeparator();
+
+    for (const auto& entry : ts.value("entries", nlohmann::json::array())) {
+        std::string tags = entry.value("activityTags", "");
+        std::cout << ConsoleUtil::col(ConsoleUtil::trunc(entry.value("projectName",""), 23), 24)
+                  << ConsoleUtil::col(std::to_string(entry.value("hours", 0)), 6)
+                  << ConsoleUtil::trunc(tags, 40) << "\n";
+    }
+    ConsoleUtil::printSeparator();
+    std::cout << "Total: " << ts.value("totalHours", 0) << " hrs\n";
+    ConsoleUtil::pause();
+}
+
+// ── View All ─────────────────────────────────────────────────────────────────
+static void viewAllTimesheets(const ApiClient& api) {
     while (true) {
         ConsoleUtil::clearScreen();
-        ConsoleUtil::printHeader("MY TIMESHEETS");
+        ConsoleUtil::printHeader("MY TIMESHEETS — ALL");
 
         const auto resp = api.get("/api/employee/timesheets", AppSession::get().token);
         if (!resp.success) { ConsoleUtil::printError(resp.errorMessage); ConsoleUtil::pause(); return; }
 
         const auto& data = resp.body.value("data", nlohmann::json::array());
 
-        std::cout << ConsoleUtil::col("Week Start",  14)
-                  << ConsoleUtil::col("Total Hrs",   12)
+        if (data.empty()) {
+            ConsoleUtil::printInfo("No timesheets found.");
+            ConsoleUtil::pause();
+            return;
+        }
+
+        std::cout << ConsoleUtil::col("Week Start", 14)
+                  << ConsoleUtil::col("Total Hrs",  12)
                   << "Status\n";
         ConsoleUtil::printSeparator();
 
+        int idx = 1;
         for (const auto& ts : data) {
-            const std::string status = ts.value("status", "");
-            const int hours = ts.value("totalHours", 0);
-            const std::string display = (status == "MISSED") ? "MISSED ⚠" : status;
-            std::cout << ConsoleUtil::col(ConsoleUtil::fmtDate(ts.value("weekStart", "")), 14)
+            const std::string status  = ts.value("status", "");
+            const int         hours   = ts.value("totalHours", 0);
+            const std::string display = (status == "MISSED") ? "MISSED \u26a0" : status;
+            std::cout << ConsoleUtil::col(std::to_string(idx++) + ". " + ConsoleUtil::fmtDate(ts.value("weekStart", "")), 14)
                       << ConsoleUtil::col(std::to_string(hours) + " hrs", 12)
                       << display << "\n";
         }
         ConsoleUtil::printSeparator();
 
-        std::cout << "\n[V] View week detail   [B] Back\nOption: ";
+        std::cout << "\nEnter row number to view detail, or [B] Back: ";
         std::string opt;
         std::getline(std::cin, opt);
 
         if (opt == "b" || opt == "B") return;
 
-        if ((opt == "v" || opt == "V") && !data.empty()) {
-            const std::string weekInput = ConsoleUtil::promptInput("Week (DD-MM-YYYY): ");
-            const std::string weekIso   = ConsoleUtil::toWeekMonday(ConsoleUtil::toIsoDate(weekInput));
+        int sel = 0;
+        try { sel = std::stoi(opt); } catch (...) {}
+        if (sel >= 1 && sel <= static_cast<int>(data.size()))
+            showWeekDetail(data[sel - 1]);
+    }
+}
 
-            for (const auto& ts : data) {
-                if (ts.value("weekStart", "") != weekIso) continue;
+// ── Filter by Week ────────────────────────────────────────────────────────────
+static void filterByWeek(const ApiClient& api) {
+    ConsoleUtil::clearScreen();
+    ConsoleUtil::printHeader("MY TIMESHEETS — FILTER BY WEEK");
 
-                ConsoleUtil::clearScreen();
-                std::cout << "── Week: " << ConsoleUtil::fmtDate(weekIso)
-                          << " — Status: " << ts.value("status", "") << " ──\n\n";
+    const std::string weekInput = ConsoleUtil::promptInput("Week (DD-MM-YYYY): ");
+    if (weekInput.empty()) return;
+    const std::string weekIso = ConsoleUtil::toWeekMonday(ConsoleUtil::toIsoDate(weekInput));
+    if (weekIso.empty()) { ConsoleUtil::printError("Invalid date."); ConsoleUtil::pause(); return; }
 
-                std::cout << ConsoleUtil::col("Project",  24)
-                          << ConsoleUtil::col("Hrs",       6)
-                          << "Activity Tags\n";
-                ConsoleUtil::printSeparator();
+    const auto resp = api.get("/api/employee/timesheets", AppSession::get().token);
+    if (!resp.success) { ConsoleUtil::printError(resp.errorMessage); ConsoleUtil::pause(); return; }
 
-                for (const auto& entry : ts.value("entries", nlohmann::json::array())) {
-                    std::string tags;
-                    for (const auto& tag : entry.value("activityTags", nlohmann::json::array())) {
-                        if (!tags.empty()) tags += ", ";
-                        tags += tag.get<std::string>();
-                    }
-                    std::cout << ConsoleUtil::col(ConsoleUtil::trunc(entry.value("projectName",""),23),24)
-                              << ConsoleUtil::col(std::to_string(entry.value("hoursWorked",0)),6)
-                              << ConsoleUtil::trunc(tags, 40) << "\n";
-                }
-                ConsoleUtil::printSeparator();
-                std::cout << "Total: " << ts.value("totalHours", 0) << " hrs\n";
-                ConsoleUtil::pause();
-                break;
-            }
+    const auto& data = resp.body.value("data", nlohmann::json::array());
+    for (const auto& ts : data) {
+        if (ts.value("weekStart", "") == weekIso) {
+            showWeekDetail(ts);
+            return;
         }
+    }
+
+    ConsoleUtil::printInfo("No timesheet found for week " + ConsoleUtil::fmtDate(weekIso) + ".");
+    ConsoleUtil::pause();
+}
+
+void showMyTimesheets(const ApiClient& api) {
+    while (true) {
+        ConsoleUtil::clearScreen();
+        ConsoleUtil::printHeader("MY TIMESHEETS");
+
+        std::cout << "1. View All Timesheets\n"
+                  << "2. Filter by Week\n"
+                  << "3. Back\n"
+                  << "\nOption: ";
+
+        std::string opt;
+        std::getline(std::cin, opt);
+
+        if      (opt == "1") viewAllTimesheets(api);
+        else if (opt == "2") filterByWeek(api);
+        else if (opt == "3" || opt == "b" || opt == "B") return;
     }
 }

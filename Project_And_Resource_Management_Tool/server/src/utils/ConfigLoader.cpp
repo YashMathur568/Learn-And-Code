@@ -34,6 +34,17 @@ void ConfigLoader::load(const std::string& filePath) {
         appConfig.llm.companyHost  = jsonConfig.value(nlohmann::json::json_pointer("/llm/companyHost"),  std::string(""));
         appConfig.llm.companyModel = jsonConfig.value(nlohmann::json::json_pointer("/llm/companyModel"), std::string(""));
 
+        // Email config (all optional — defaults to disabled)
+        if (jsonConfig.contains("email")) {
+            const auto& em = jsonConfig.at("email");
+            appConfig.email.enabled     = em.value("enabled",     false);
+            appConfig.email.smtpHost    = em.value("smtpHost",    std::string(""));
+            appConfig.email.smtpPort    = em.value("smtpPort",    587);
+            appConfig.email.username    = em.value("username",    std::string(""));
+            appConfig.email.password    = em.value("password",    std::string(""));
+            appConfig.email.fromAddress = em.value("fromAddress", std::string(""));
+        }
+
         appConfig.schedulerIntervalHours = jsonConfig.at("schedulerIntervalHours").get<int>();
         appConfig.maxWeeklyHours         = jsonConfig.at("maxWeeklyHours").get<int>();
         appConfig.serverPort             = jsonConfig.at("serverPort").get<int>();

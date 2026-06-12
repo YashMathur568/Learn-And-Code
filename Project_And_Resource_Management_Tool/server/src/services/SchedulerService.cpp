@@ -15,6 +15,7 @@ SchedulerService::SchedulerService(
     std::shared_ptr<IProjectRepository>    projectRepository,
     std::shared_ptr<IMilestoneRepository>  milestoneRepository,
     std::shared_ptr<ITimesheetRepository>  timesheetRepository,
+    std::shared_ptr<NotificationService>   notificationService,
     int                                    intervalHours
 )
     : employeeRepository_(std::move(employeeRepository))
@@ -22,6 +23,7 @@ SchedulerService::SchedulerService(
     , projectRepository_(std::move(projectRepository))
     , milestoneRepository_(std::move(milestoneRepository))
     , timesheetRepository_(std::move(timesheetRepository))
+    , notificationService_(std::move(notificationService))
     , intervalHours_(intervalHours) {}
 
 SchedulerService::~SchedulerService() {
@@ -63,6 +65,9 @@ void SchedulerService::runOnce() {
         recomputeEmployeeStatuses();
         recomputeProjectHealth();
         markMissedTimesheets();
+        if (notificationService_) {
+            notificationService_->processTimesheetReminders();
+        }
     } catch (const std::exception& ex) {
         std::cerr << "[Scheduler] Error: " << ex.what() << std::endl;
     }
@@ -116,6 +121,13 @@ void SchedulerService::recomputeProjectHealth() {
 
         if (project.health != newHealth) {
             projectRepository_->updateHealth(project.projectId, newHealth);
+            if (newHealth == "AT_RISK" && notificationService_) {
+                try {
+                    notificationService_->sendAtRiskAlert(project.projectId);
+                } catch (const std::exception& ex) {
+                    std::cerr << "[Scheduler] AT_RISK alert failed: " << ex.what() << std::endl;
+                }
+            }
         }
     }
 }

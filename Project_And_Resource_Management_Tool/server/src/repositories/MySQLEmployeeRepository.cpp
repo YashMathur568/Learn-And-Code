@@ -14,7 +14,7 @@ static const std::string EMPLOYEE_SELECT =
     "SELECT u.user_id, rp.manager_id, ro.role_name AS role, u.full_name, u.email, "
     "COALESCE(rp.department, '') AS department, "
     "COALESCE(rp.designation, '') AS designation, "
-    "COALESCE(rs.status, '') AS status, u.is_active "
+    "COALESCE(rs.status, '') AS status, u.is_active, u.is_frozen "
     "FROM users u "
     "JOIN roles ro ON ro.role_id = u.role_id "
     "LEFT JOIN resource_profile rp ON rp.user_id = u.user_id "
@@ -31,6 +31,7 @@ Employee MySQLEmployeeRepository::mapRowToEmployee(sql::ResultSet* resultSet) {
     employee.designation = resultSet->getString("designation");
     employee.status      = resultSet->getString("status");
     employee.isActive    = resultSet->getBoolean("is_active");
+    employee.isFrozen    = resultSet->getBoolean("is_frozen");
     return employee;
 }
 
@@ -223,6 +224,35 @@ bool MySQLEmployeeRepository::existsByUserId(int userId) {
         return resultSet->getInt(1) > 0;
     } catch (const sql::SQLException& sqlException) {
         throw AppException(std::string("DB error in existsByUserId: ") + sqlException.what());
+    }
+}
+
+void MySQLEmployeeRepository::setFrozen(int userId, bool frozen) {
+    try {
+        auto connection = DatabasePool::getInstance().acquire();
+        std::unique_ptr<sql::PreparedStatement> statement(
+            connection->prepareStatement("UPDATE users SET is_frozen = ? WHERE user_id = ?")
+        );
+        statement->setInt(1, frozen ? 1 : 0);
+        statement->setInt(2, userId);
+        statement->executeUpdate();
+    } catch (const sql::SQLException& sqlException) {
+        throw AppException(std::string("DB error in setFrozen: ") + sqlException.what());
+    }
+}
+
+bool MySQLEmployeeRepository::isFrozen(int userId) {
+    try {
+        auto connection = DatabasePool::getInstance().acquire();
+        std::unique_ptr<sql::PreparedStatement> statement(
+            connection->prepareStatement("SELECT is_frozen FROM users WHERE user_id = ?")
+        );
+        statement->setInt(1, userId);
+        std::unique_ptr<sql::ResultSet> resultSet(statement->executeQuery());
+        if (resultSet->next()) return resultSet->getBoolean("is_frozen");
+        return false;
+    } catch (const sql::SQLException& sqlException) {
+        throw AppException(std::string("DB error in isFrozen: ") + sqlException.what());
     }
 }
 

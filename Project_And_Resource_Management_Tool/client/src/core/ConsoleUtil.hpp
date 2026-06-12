@@ -175,8 +175,8 @@ inline std::string toIsoDate(const std::string& display) {
     if (month.size() == 1) month = "0" + month;
     if (year.size() != 4 || day.size() != 2 || month.size() != 2) return "";
     try {
-        const int d = std::stoi(day), m = std::stoi(month), y = std::stoi(year);
-        if (d < 1 || d > 31 || m < 1 || m > 12 || y < 2000 || y > 2100) return "";
+        const int dayNum = std::stoi(day), monthNum = std::stoi(month), yearNum = std::stoi(year);
+        if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12 || yearNum < 2000 || yearNum > 2100) return "";
     } catch (...) { return ""; }
     return year + "-" + month + "-" + day;
 }
@@ -186,14 +186,14 @@ inline std::string toIsoDate(const std::string& display) {
 // Returns "" on invalid input.
 inline std::string toWeekMonday(const std::string& isoDate) {
     if (isoDate.size() < 10) return "";
-    std::tm t = {};
+    std::tm weekTm = {};
     std::istringstream ss(isoDate);
-    ss >> std::get_time(&t, "%Y-%m-%d");
+    ss >> std::get_time(&weekTm, "%Y-%m-%d");
     if (ss.fail()) return "";
-    t.tm_hour = 12;
-    std::mktime(&t);  // fills tm_wday
-    const int daysToMon = (t.tm_wday == 0) ? 6 : (t.tm_wday - 1);
-    const std::time_t monTime = std::mktime(&t) - static_cast<std::time_t>(daysToMon) * 86400;
+    weekTm.tm_hour = 12;
+    std::mktime(&weekTm);  // fills tm_wday
+    const int daysToMon = (weekTm.tm_wday == 0) ? 6 : (weekTm.tm_wday - 1);
+    const std::time_t monTime = std::mktime(&weekTm) - static_cast<std::time_t>(daysToMon) * 86400;
     std::tm monTm = {};
     localtime_r(&monTime, &monTm);
     char buf[16];
@@ -204,14 +204,14 @@ inline std::string toWeekMonday(const std::string& isoDate) {
 // Last Monday in YYYY-MM-DD format
 inline std::string lastMonday() {
     std::time_t now = std::time(nullptr);
-    std::tm     tm{};
-    localtime_r(&now, &tm);
-    int dow = tm.tm_wday == 0 ? 6 : tm.tm_wday - 1; // Mon=0
+    std::tm     nowTm{};
+    localtime_r(&now, &nowTm);
+    int dow = nowTm.tm_wday == 0 ? 6 : nowTm.tm_wday - 1; // Mon=0
     std::time_t monday = now - static_cast<std::time_t>(dow) * 86400;
-    std::tm mtm{};
-    localtime_r(&monday, &mtm);
+    std::tm mondayTm{};
+    localtime_r(&monday, &mondayTm);
     char buf[16];
-    std::strftime(buf, sizeof(buf), "%Y-%m-%d", &mtm);
+    std::strftime(buf, sizeof(buf), "%Y-%m-%d", &mondayTm);
     return buf;
 }
 
