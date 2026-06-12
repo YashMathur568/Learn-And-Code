@@ -8,7 +8,7 @@
 #include <vector>
 
 struct CreateAllocationRequest {
-    int         employeeId{0};
+    int         userId{0};
     int         projectId{0};
     int         utilisation{0};
     std::string fromDate;
@@ -16,7 +16,7 @@ struct CreateAllocationRequest {
 
     static CreateAllocationRequest fromJson(const nlohmann::json& body) {
         CreateAllocationRequest request;
-        request.employeeId  = body.at("employeeId").get<int>();
+        request.userId      = body.at("userId").get<int>();
         request.projectId   = body.at("projectId").get<int>();
         request.utilisation = body.at("utilisation").get<int>();
         request.fromDate    = body.at("fromDate").get<std::string>();
@@ -56,20 +56,20 @@ struct TimesheetWithEntries {
 
 inline nlohmann::json allocationToJson(const Allocation& allocation) {
     return {
-        {"allocationId", allocation.allocationId},
-        {"employeeId",   allocation.employeeId},
-        {"projectId",    allocation.projectId},
-        {"utilisation",  allocation.utilisation},
-        {"fromDate",     allocation.fromDate},
-        {"toDate",       allocation.toDate},
-        {"isActive",     allocation.isActive}
+        {"allocationId",       allocation.allocationId},
+        {"userId",             allocation.userId},
+        {"projectId",         allocation.projectId},
+        {"allocationPercentage", allocation.utilisation},
+        {"fromDate",          allocation.fromDate},
+        {"toDate",            allocation.toDate},
+        {"isActive",          allocation.isActive}
     };
 }
 
 inline nlohmann::json timesheetToJson(const Timesheet& timesheet) {
     return {
         {"timesheetId",  timesheet.timesheetId},
-        {"employeeId",   timesheet.employeeId},
+        {"userId",       timesheet.userId},
         {"weekStart",    timesheet.weekStart},
         {"status",       timesheet.status},
         {"submittedAt",  timesheet.submittedAt}

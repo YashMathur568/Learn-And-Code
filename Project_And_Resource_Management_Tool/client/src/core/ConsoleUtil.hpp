@@ -6,6 +6,7 @@
 #include <sstream>
 #include <ctime>
 #include <iomanip>
+#include <utility>
 
 #ifdef _WIN32
 #  include <conio.h>
@@ -32,16 +33,30 @@ inline void clearScreen() {
     std::cout << "\033[3J\033[2J\033[H" << std::flush;
 }
 
+// ── UTF-8 display width (counts codepoints, not bytes) ──────────────────────
+inline int utf8Width(const std::string& text) {
+    int width = 0;
+    for (size_t bytePos = 0; bytePos < text.size(); ) {
+        unsigned char byte = static_cast<unsigned char>(text[bytePos]);
+        if      (byte < 0x80) bytePos += 1;
+        else if (byte < 0xE0) bytePos += 2;
+        else if (byte < 0xF0) bytePos += 3;
+        else                  bytePos += 4;
+        ++width;
+    }
+    return width;
+}
+
 // ── Horizontal rules ────────────────────────────────────────────────────────
 inline std::string hrDouble() {
-    std::string s;
-    for (int i = 0; i < BOX_WIDTH; ++i) s += "\xE2\x95\x90"; // UTF-8 ═
-    return s;
+    std::string line;
+    for (int idx = 0; idx < BOX_WIDTH; ++idx) line += "\xE2\x95\x90"; // UTF-8 ═
+    return line;
 }
 inline std::string hrSingle() {
-    std::string s;
-    for (int i = 0; i < BOX_WIDTH; ++i) s += "\xE2\x94\x80"; // UTF-8 ─
-    return s;
+    std::string line;
+    for (int idx = 0; idx < BOX_WIDTH; ++idx) line += "\xE2\x94\x80"; // UTF-8 ─
+    return line;
 }
 
 // ── Box drawing ─────────────────────────────────────────────────────────────
@@ -52,7 +67,7 @@ inline void printBoxBottom() {
     std::cout << "╚" << hrDouble() << "╝\n";
 }
 inline void printBoxRow(const std::string& text) {
-    int pad = BOX_WIDTH - static_cast<int>(text.size());
+    int pad = BOX_WIDTH - utf8Width(text);
     if (pad < 0) pad = 0;
     std::cout << "║ " << text << std::string(static_cast<size_t>(pad - 1), ' ') << "║\n";
 }
@@ -114,10 +129,11 @@ inline std::string promptPassword(const std::string& label) {
 
 // ── Column-padded row builder ────────────────────────────────────────────────
 inline std::string col(const std::string& text, int width) {
-    if (static_cast<int>(text.size()) >= width) {
+    const int textWidth = utf8Width(text);
+    if (textWidth >= width) {
         return text.substr(0, static_cast<size_t>(width - 1)) + " ";
     }
-    return text + std::string(static_cast<size_t>(width - static_cast<int>(text.size())), ' ');
+    return text + std::string(static_cast<size_t>(width - textWidth), ' ');
 }
 
 // ── Date/time helpers ────────────────────────────────────────────────────────
@@ -145,10 +161,44 @@ inline std::string fmtDate(const std::string& isoDate) {
     return isoDate.substr(8, 2) + "-" + isoDate.substr(5, 2) + "-" + isoDate.substr(0, 4);
 }
 
-// Converts display date "DD-MM-YYYY" → "YYYY-MM-DD" for API
+// Converts display date "D(D)-M(M)-YYYY" to "YYYY-MM-DD" for API.
+// Returns "" if the input is not a recognisable or valid date.
 inline std::string toIsoDate(const std::string& display) {
-    if (display.size() < 10) return display;
-    return display.substr(6, 4) + "-" + display.substr(3, 2) + "-" + display.substr(0, 2);
+    const size_t d1 = display.find('-');
+    if (d1 == std::string::npos) return "";
+    const size_t d2 = display.find('-', d1 + 1);
+    if (d2 == std::string::npos) return "";
+    std::string day   = display.substr(0, d1);
+    std::string month = display.substr(d1 + 1, d2 - d1 - 1);
+    std::string year  = display.substr(d2 + 1);
+    if (day.size()   == 1) day   = "0" + day;
+    if (month.size() == 1) month = "0" + month;
+    if (year.size() != 4 || day.size() != 2 || month.size() != 2) return "";
+    try {
+        const int d = std::stoi(day), m = std::stoi(month), y = std::stoi(year);
+        if (d < 1 || d > 31 || m < 1 || m > 12 || y < 2000 || y > 2100) return "";
+    } catch (...) { return ""; }
+    return year + "-" + month + "-" + day;
+}
+
+// Given any YYYY-MM-DD date, returns the Monday of that same week.
+// If the input is already a Monday it is returned unchanged.
+// Returns "" on invalid input.
+inline std::string toWeekMonday(const std::string& isoDate) {
+    if (isoDate.size() < 10) return "";
+    std::tm t = {};
+    std::istringstream ss(isoDate);
+    ss >> std::get_time(&t, "%Y-%m-%d");
+    if (ss.fail()) return "";
+    t.tm_hour = 12;
+    std::mktime(&t);  // fills tm_wday
+    const int daysToMon = (t.tm_wday == 0) ? 6 : (t.tm_wday - 1);
+    const std::time_t monTime = std::mktime(&t) - static_cast<std::time_t>(daysToMon) * 86400;
+    std::tm monTm = {};
+    localtime_r(&monTime, &monTm);
+    char buf[16];
+    std::strftime(buf, sizeof(buf), "%Y-%m-%d", &monTm);
+    return buf;
 }
 
 // Last Monday in YYYY-MM-DD format
@@ -162,6 +212,16 @@ inline std::string lastMonday() {
     localtime_r(&monday, &mtm);
     char buf[16];
     std::strftime(buf, sizeof(buf), "%Y-%m-%d", &mtm);
+    return buf;
+}
+
+// Today as YYYY-MM-DD
+inline std::string todayIso() {
+    std::time_t now = std::time(nullptr);
+    std::tm     tm{};
+    localtime_r(&now, &tm);
+    char buf[16];
+    std::strftime(buf, sizeof(buf), "%Y-%m-%d", &tm);
     return buf;
 }
 
@@ -207,6 +267,82 @@ inline std::string healthIcon(const std::string& health) {
     if (health == "AT_RISK")   return "[!!]";
     if (health == "ATTENTION") return "[~~]";
     return "[?]";
+}
+
+// ── IT department and designation enumerations ───────────────────────────────
+inline const std::vector<std::string> DEPARTMENTS = {
+    "Engineering", "Product", "Design", "QA / Testing",
+    "DevOps / Infrastructure", "Data & Analytics", "Security",
+    "Architecture", "Project Management", "Management",
+    "Administration", "HR & Operations", "Finance",
+    "Sales & Business Development"
+};
+
+inline const std::vector<std::string> DESIGNATIONS = {
+    "Intern", "Junior", "Mid-Level", "Senior",
+    "Lead", "Principal", "Manager", "Senior Manager",
+    "Director", "VP", "C-Level"
+};
+
+// ── Predefined IT skill catalogue ────────────────────────────────────────────
+struct SkillOption { std::string name; std::string category; };
+
+inline const std::vector<SkillOption> SKILL_OPTIONS = {
+    {"C++",                    "Backend"},
+    {"Java",                   "Backend"},
+    {"Python",                 "Backend"},
+    {"JavaScript",             "Frontend"},
+    {"React / Angular / Vue",  "Frontend"},
+    {"Node.js",                "Backend"},
+    {"SQL / Database",         "Backend"},
+    {"Docker / Kubernetes",    "DevOps"},
+    {"AWS / Azure / GCP",      "DevOps"},
+    {"Selenium / Playwright",  "QA"},
+};
+
+// Shows the skill catalogue and returns {name, category}.
+// Pass a non-empty currentName to offer a "keep" option (returns {"",""}  on keep).
+inline std::pair<std::string, std::string> selectSkill(
+        const std::string& currentName = "") {
+    std::cout << "\nSkills:\n";
+    std::cout << "  " << col("#", 4) << col("Skill Name", 28) << "Category\n";
+    for (size_t idx = 0; idx < SKILL_OPTIONS.size(); ++idx) {
+        const std::string indicator =
+            (SKILL_OPTIONS[idx].name == currentName) ? "  \u2190" : "";
+        std::cout << "  " << col(std::to_string(idx + 1) + ".", 4)
+                  << col(SKILL_OPTIONS[idx].name, 28)
+                  << SKILL_OPTIONS[idx].category << indicator << "\n";
+    }
+    if (!currentName.empty())
+        std::cout << "  0.  (keep: " << currentName << ")\n";
+    const std::string sel = promptInput("Select #: ");
+    if (!currentName.empty() && (sel.empty() || sel == "0"))
+        return {"", ""};
+    int selectedIdx = 0;
+    try { selectedIdx = std::stoi(sel) - 1; } catch (...) { return {"", ""}; }
+    if (selectedIdx < 0 || selectedIdx >= static_cast<int>(SKILL_OPTIONS.size()))
+        return {"", ""};
+    return {SKILL_OPTIONS[selectedIdx].name, SKILL_OPTIONS[selectedIdx].category};
+}
+
+// Shows a numbered list and returns the chosen value, or `current` if the user
+// presses Enter / enters 0.
+inline std::string selectFromList(const std::string& label,
+                                   const std::vector<std::string>& options,
+                                   const std::string& current) {
+    std::cout << "\n" << label << ":\n";
+    for (size_t idx = 0; idx < options.size(); ++idx) {
+        const std::string indicator = (options[idx] == current) ? "  \u2190" : "";
+        std::cout << "  " << col(std::to_string(idx + 1) + ".", 4)
+                  << options[idx] << indicator << "\n";
+    }
+    std::cout << "  0.  (keep: " << (current.empty() ? "none" : current) << ")\n";
+    const std::string sel = promptInput("Select #: ");
+    if (sel.empty() || sel == "0") return current;
+    int selectedIdx = 0;
+    try { selectedIdx = std::stoi(sel) - 1; } catch (...) { return current; }
+    if (selectedIdx < 0 || selectedIdx >= static_cast<int>(options.size())) return current;
+    return options[selectedIdx];
 }
 
 } // namespace ConsoleUtil

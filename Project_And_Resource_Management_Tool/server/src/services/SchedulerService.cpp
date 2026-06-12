@@ -71,10 +71,10 @@ void SchedulerService::runOnce() {
 void SchedulerService::recomputeEmployeeStatuses() {
     const auto employees = employeeRepository_->findAllActive();
     for (const auto& employee : employees) {
-        const std::vector<Allocation> active = allocationRepository_->findActiveByEmployeeId(employee.employeeId);
+        const std::vector<Allocation> active = allocationRepository_->findActiveByUserId(employee.userId);
         const std::string newStatus = active.empty() ? "BENCH" : "ALLOCATED";
         if (employee.status != newStatus) {
-            employeeRepository_->setStatus(employee.employeeId, newStatus);
+            employeeRepository_->setStatus(employee.userId, newStatus);
         }
     }
 }
@@ -121,19 +121,27 @@ void SchedulerService::recomputeProjectHealth() {
 }
 
 void SchedulerService::markMissedTimesheets() {
-    const auto employees  = employeeRepository_->findAllActive();
+    const auto employees   = employeeRepository_->findAllActive();
     const auto pastMondays = previousMondays(4);
 
     for (const auto& employee : employees) {
-        const auto allocations = allocationRepository_->findActiveByEmployeeId(employee.employeeId);
-        if (allocations.empty()) {
-            continue;
-        }
+        const auto allAllocations = allocationRepository_->findByUserId(employee.userId);
+        if (allAllocations.empty()) continue;
 
         for (const auto& weekStart : pastMondays) {
-            const auto existing = timesheetRepository_->findByEmployeeAndWeek(employee.employeeId, weekStart);
+            // Only mark missed if the employee had an allocation covering this specific week
+            bool wasAllocated = false;
+            for (const auto& alloc : allAllocations) {
+                if (alloc.fromDate <= weekStart && alloc.toDate >= weekStart) {
+                    wasAllocated = true;
+                    break;
+                }
+            }
+            if (!wasAllocated) continue;
+
+            const auto existing = timesheetRepository_->findByUserAndWeek(employee.userId, weekStart);
             if (!existing.has_value()) {
-                timesheetRepository_->createMissed(employee.employeeId, weekStart);
+                timesheetRepository_->createMissed(employee.userId, weekStart);
             }
         }
     }

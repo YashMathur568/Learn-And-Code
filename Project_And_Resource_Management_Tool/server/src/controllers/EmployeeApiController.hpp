@@ -2,6 +2,7 @@
 
 #include "../services/IAllocationService.hpp"
 #include "../services/ITimesheetService.hpp"
+#include "../repositories/IProjectRepository.hpp"
 #include <drogon/HttpController.h>
 #include <memory>
 
@@ -31,6 +32,7 @@ public:
     );
 
 private:
-    std::shared_ptr<IAllocationService> allocationService;
-    std::shared_ptr<ITimesheetService>  timesheetService;
+    std::shared_ptr<IAllocationService>  allocationService;
+    std::shared_ptr<ITimesheetService>   timesheetService;
+    std::shared_ptr<IProjectRepository>  projectRepository;
 };

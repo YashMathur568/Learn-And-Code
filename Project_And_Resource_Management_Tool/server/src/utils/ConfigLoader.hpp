@@ -15,6 +15,8 @@ struct LlmConfig {
     std::string apiKey;
     std::string geminiModel;
     std::string groqModel;
+    std::string companyHost;
+    std::string companyModel;
 };
 
 struct AppConfig {

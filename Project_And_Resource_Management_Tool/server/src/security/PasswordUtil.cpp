@@ -20,17 +20,17 @@ static constexpr int PBKDF2_HASH_BYTES = 32;
 static std::string toHex(const unsigned char* data, int len) {
     std::ostringstream oss;
     oss << std::hex << std::setfill('0');
-    for (int i = 0; i < len; i++) {
-        oss << std::setw(2) << static_cast<int>(data[i]);
+    for (int byteIdx = 0; byteIdx < len; byteIdx++) {
+        oss << std::setw(2) << static_cast<int>(data[byteIdx]);
     }
     return oss.str();
 }
 
 static bool fromHex(const std::string& hex, unsigned char* out, int expectedLen) {
     if (static_cast<int>(hex.size()) != expectedLen * 2) return false;
-    for (int i = 0; i < expectedLen; i++) {
+    for (int byteIdx = 0; byteIdx < expectedLen; byteIdx++) {
         try {
-            out[i] = static_cast<unsigned char>(std::stoi(hex.substr(i * 2, 2), nullptr, 16));
+            out[byteIdx] = static_cast<unsigned char>(std::stoi(hex.substr(byteIdx * 2, 2), nullptr, 16));
         } catch (...) {
             return false;
         }

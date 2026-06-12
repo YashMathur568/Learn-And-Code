@@ -7,7 +7,6 @@ struct AppSession {
     std::string fullName;
     std::string role;
     int         userId{0};
-    int         employeeId{0};
     bool        forcePasswordChange{false};
     bool        loggedIn{false};
 
@@ -17,7 +16,6 @@ struct AppSession {
         fullName.clear();
         role.clear();
         userId              = 0;
-        employeeId          = 0;
         forcePasswordChange = false;
         loggedIn            = false;
     }

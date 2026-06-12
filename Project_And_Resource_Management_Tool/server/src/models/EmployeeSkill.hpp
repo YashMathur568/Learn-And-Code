@@ -4,7 +4,7 @@
 
 struct EmployeeSkill {
     int         skillId{0};
-    int         employeeId{0};
+    int         userId{0};
     std::string skillName;
     std::string category;
     std::string proficiency;

@@ -29,12 +29,12 @@ void showAdminConfigMenu(const ApiClient& api) {
         if (resp.success) {
             const auto& data = resp.body.value("data", nlohmann::json::array());
             for (const auto& cfg : data) {
-                const std::string k = cfg.value("configKey", "");
-                const std::string v = cfg.value("configValue", "");
-                if (k == "llm_provider")           llmProvider       = v;
-                else if (k == "llm_api_key")        llmApiKey         = v;
-                else if (k == "scheduler_interval_hours") schedulerInterval = v;
-                else if (k == "max_weekly_hours")   maxWeeklyHours    = v;
+                const std::string configKey   = cfg.value("configKey", "");
+                const std::string configValue = cfg.value("configValue", "");
+                if (configKey == "llm_provider")           llmProvider       = configValue;
+                else if (configKey == "llm_api_key")        llmApiKey         = configValue;
+                else if (configKey == "scheduler_interval_hours") schedulerInterval = configValue;
+                else if (configKey == "max_weekly_hours")   maxWeeklyHours    = configValue;
             }
         }
 

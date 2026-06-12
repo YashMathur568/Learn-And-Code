@@ -11,26 +11,29 @@
 
 User MySQLUserRepository::mapRowToUser(sql::ResultSet* resultSet) {
     User user;
-    user.userId         = resultSet->getInt("user_id");
-    user.fullName       = resultSet->getString("full_name");
-    user.email          = resultSet->getString("email");
-    user.username       = resultSet->getString("username");
-    user.passwordHash   = resultSet->getString("password_hash");
-    user.role           = resultSet->getString("role");
-    user.isActive       = resultSet->getBoolean("is_active");
-    user.forcePwdChange = resultSet->getBoolean("force_pwd_change");
-    user.createdAt      = resultSet->getString("created_at");
+    user.userId             = resultSet->getInt("user_id");
+    user.fullName           = resultSet->getString("full_name");
+    user.email              = resultSet->getString("email");
+    user.username           = resultSet->getString("username");
+    user.passwordHash       = resultSet->getString("password_hash");
+    user.role               = resultSet->getString("role");
+    user.isActive           = resultSet->getBoolean("is_active");
+    user.passwordExpiresAt  = resultSet->getString("password_expires_at");
+    user.createdAt          = resultSet->getString("created_at");
     return user;
 }
+
+static const std::string USER_SELECT =
+    "SELECT u.user_id, u.full_name, u.email, u.username, u.password_hash, "
+    "r.role_name AS role, u.is_active, u.password_expires_at, u.created_at "
+    "FROM users u JOIN roles r ON r.role_id = u.role_id ";
 
 std::optional<User> MySQLUserRepository::findByUsername(const std::string& username) {
     try {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                "SELECT user_id, full_name, email, username, password_hash, "
-                "role, is_active, force_pwd_change, created_at "
-                "FROM users WHERE BINARY username = ?"
+                USER_SELECT + "WHERE BINARY u.username = ?"
             )
         );
         statement->setString(1, username);
@@ -49,9 +52,7 @@ std::optional<User> MySQLUserRepository::findById(int userId) {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                "SELECT user_id, full_name, email, username, password_hash, "
-                "role, is_active, force_pwd_change, created_at "
-                "FROM users WHERE user_id = ?"
+                USER_SELECT + "WHERE u.user_id = ?"
             )
         );
         statement->setInt(1, userId);
@@ -70,9 +71,7 @@ std::vector<User> MySQLUserRepository::findAll() {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                "SELECT user_id, full_name, email, username, password_hash, "
-                "role, is_active, force_pwd_change, created_at "
-                "FROM users ORDER BY user_id"
+                USER_SELECT + "ORDER BY u.user_id"
             )
         );
         std::unique_ptr<sql::ResultSet> resultSet(statement->executeQuery());
@@ -91,8 +90,9 @@ int MySQLUserRepository::create(const User& user) {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                "INSERT INTO users (full_name, email, username, password_hash, role, "
-                "is_active, force_pwd_change) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                "INSERT INTO users (full_name, email, username, password_hash, role_id, "
+                "is_active, password_expires_at) "
+                "VALUES (?, ?, ?, ?, (SELECT role_id FROM roles WHERE role_name = ?), ?, NOW())"
             )
         );
         statement->setString(1, user.fullName);
@@ -101,7 +101,6 @@ int MySQLUserRepository::create(const User& user) {
         statement->setString(4, user.passwordHash);
         statement->setString(5, user.role);
         statement->setBoolean(6, user.isActive);
-        statement->setBoolean(7, user.forcePwdChange);
         statement->executeUpdate();
 
         std::unique_ptr<sql::PreparedStatement> idStatement(
@@ -131,19 +130,33 @@ void MySQLUserRepository::updatePasswordHash(int userId, const std::string& newH
     }
 }
 
-void MySQLUserRepository::setForcePwdChange(int userId, bool value) {
+void MySQLUserRepository::refreshPasswordExpiry(int userId) {
     try {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                "UPDATE users SET force_pwd_change = ? WHERE user_id = ?"
+                "UPDATE users SET password_expires_at = DATE_ADD(NOW(), INTERVAL 3 MONTH) WHERE user_id = ?"
             )
         );
-        statement->setBoolean(1, value);
-        statement->setInt(2, userId);
+        statement->setInt(1, userId);
         statement->executeUpdate();
     } catch (const sql::SQLException& sqlException) {
-        throw AppException(std::string("Database error in setForcePwdChange: ") + sqlException.what());
+        throw AppException(std::string("Database error in refreshPasswordExpiry: ") + sqlException.what());
+    }
+}
+
+void MySQLUserRepository::expirePasswordNow(int userId) {
+    try {
+        auto connection = DatabasePool::getInstance().acquire();
+        std::unique_ptr<sql::PreparedStatement> statement(
+            connection->prepareStatement(
+                "UPDATE users SET password_expires_at = NOW() WHERE user_id = ?"
+            )
+        );
+        statement->setInt(1, userId);
+        statement->executeUpdate();
+    } catch (const sql::SQLException& sqlException) {
+        throw AppException(std::string("Database error in expirePasswordNow: ") + sqlException.what());
     }
 }
 

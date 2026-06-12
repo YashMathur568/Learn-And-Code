@@ -36,6 +36,12 @@ public:
         : AppException(message) {}
 };
 
+class ForbiddenException : public AppException {
+public:
+    explicit ForbiddenException(const std::string& message)
+        : AppException(message) {}
+};
+
 class ConflictException : public AppException {
 public:
     explicit ConflictException(const std::string& message)

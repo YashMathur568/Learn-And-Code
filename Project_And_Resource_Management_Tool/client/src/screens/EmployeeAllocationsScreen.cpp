@@ -21,14 +21,14 @@ void showMyAllocations(const ApiClient& api) {
     ConsoleUtil::printSeparator();
 
     int totalPct = 0;
-    for (const auto& a : data) {
-        if (!a.value("isActive", false)) continue;
-        const int pct = a.value("allocationPercentage", 0);
+    for (const auto& allocation : data) {
+        if (!allocation.value("isActive", false)) continue;
+        const int pct = allocation.value("allocationPercentage", 0);
         totalPct += pct;
-        std::cout << ConsoleUtil::col(ConsoleUtil::trunc(a.value("projectName",""),27), 28)
+        std::cout << ConsoleUtil::col(ConsoleUtil::trunc(allocation.value("projectName",""),27), 28)
                   << ConsoleUtil::col(std::to_string(pct) + "%", 5)
-                  << ConsoleUtil::col(ConsoleUtil::fmtDate(a.value("fromDate","")), 12)
-                  << ConsoleUtil::col(ConsoleUtil::fmtDate(a.value("toDate","")),   12)
+                  << ConsoleUtil::col(ConsoleUtil::fmtDate(allocation.value("fromDate","")), 12)
+                  << ConsoleUtil::col(ConsoleUtil::fmtDate(allocation.value("toDate","")),   12)
                   << "ACTIVE\n";
     }
     ConsoleUtil::printSeparator();

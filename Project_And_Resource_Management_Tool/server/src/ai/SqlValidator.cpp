@@ -14,8 +14,9 @@ static const std::vector<std::string> BLOCKED_KEYWORDS = {
 };
 
 static const std::vector<std::string> ALLOWED_TABLES = {
-    "employees", "employee_skills", "users", "projects",
-    "milestones", "allocations", "timesheets", "timesheet_entries"
+    "users", "roles", "resource_profile", "resource_status",
+    "user_skills", "projects", "milestones", "allocations",
+    "timesheets", "timesheet_entries"
 };
 
 std::string SqlValidator::normalize(const std::string& sql) {

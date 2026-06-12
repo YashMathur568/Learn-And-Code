@@ -57,9 +57,8 @@ Employee EmployeeService::getById(int employeeId) {
 }
 
 Employee EmployeeService::updateEmployee(int employeeId, const UpdateEmployeeRequest& request) {
-    if (request.fullName.empty() || request.email.empty() ||
-        request.department.empty() || request.designation.empty()) {
-        throw ValidationException("fullName, email, department, and designation are required.");
+    if (request.fullName.empty() || request.email.empty()) {
+        throw ValidationException("fullName and email are required.");
     }
 
     auto optionalEmployee = employeeRepository->findById(employeeId);
@@ -77,63 +76,57 @@ Employee EmployeeService::updateEmployee(int employeeId, const UpdateEmployeeReq
     return updatedEmployee;
 }
 
-std::vector<Allocation> EmployeeService::deactivateEmployee(int employeeId) {
-    auto optionalEmployee = employeeRepository->findById(employeeId);
+std::vector<Allocation> EmployeeService::deactivateEmployee(int userId) {
+    auto optionalEmployee = employeeRepository->findById(userId);
     if (!optionalEmployee.has_value()) {
-        throw NotFoundException("Employee with ID " + std::to_string(employeeId) + " not found.");
+        throw NotFoundException("Employee with ID " + std::to_string(userId) + " not found.");
     }
     if (!optionalEmployee->isActive) {
         throw ValidationException("Employee is already inactive.");
     }
-    const std::vector<Allocation> endedAllocations = allocationRepository->findActiveByEmployeeId(employeeId);
-    allocationRepository->endAllByEmployee(employeeId);
-    employeeRepository->setActiveStatus(employeeId, false);
-    employeeRepository->setStatus(employeeId, "BENCH");
-    userRepository->setActiveStatus(optionalEmployee->userId, false);
+    const std::vector<Allocation> endedAllocations = allocationRepository->findActiveByUserId(userId);
+    allocationRepository->endAllByUser(userId);
+    employeeRepository->setActiveStatus(userId, false);
+    employeeRepository->setStatus(userId, "BENCH");
     return endedAllocations;
 }
 
-void EmployeeService::assignManager(int employeeId, const AssignManagerRequest& request) {
-    auto optionalEmployee = employeeRepository->findById(employeeId);
+void EmployeeService::assignManager(int userId, const AssignManagerRequest& request) {
+    auto optionalEmployee = employeeRepository->findById(userId);
     if (!optionalEmployee.has_value()) {
-        throw NotFoundException("Employee with ID " + std::to_string(employeeId) + " not found.");
+        throw NotFoundException("Employee with ID " + std::to_string(userId) + " not found.");
     }
 
-    if (employeeId == request.managerEmployeeId) {
+    if (userId == request.managerId) {
         throw ValidationException("An employee cannot be assigned as their own manager.");
     }
 
-    auto optionalManager = employeeRepository->findById(request.managerEmployeeId);
-    if (!optionalManager.has_value()) {
-        throw NotFoundException("Manager employee with ID " + std::to_string(request.managerEmployeeId) + " not found.");
+    auto optionalManager = userRepository->findById(request.managerId);
+    if (!optionalManager.has_value() || optionalManager->role != "MANAGER") {
+        throw ValidationException("The specified user does not have the MANAGER role.");
     }
 
-    auto optionalManagerUser = userRepository->findById(optionalManager->userId);
-    if (!optionalManagerUser.has_value() || optionalManagerUser->role != "MANAGER") {
-        throw ValidationException("The specified employee does not have the MANAGER role.");
-    }
-
-    employeeRepository->assignManager(employeeId, request.managerEmployeeId);
+    employeeRepository->assignManager(userId, request.managerId);
 }
 
-std::vector<EmployeeSkill> EmployeeService::getSkills(int employeeId) {
-    auto optionalEmployee = employeeRepository->findById(employeeId);
+std::vector<EmployeeSkill> EmployeeService::getSkills(int userId) {
+    auto optionalEmployee = employeeRepository->findById(userId);
     if (!optionalEmployee.has_value()) {
-        throw NotFoundException("Employee with ID " + std::to_string(employeeId) + " not found.");
+        throw NotFoundException("Employee with ID " + std::to_string(userId) + " not found.");
     }
-    return skillRepository->findByEmployeeId(employeeId);
+    return skillRepository->findByUserId(userId);
 }
 
-EmployeeSkill EmployeeService::addSkill(int employeeId, const SkillRequest& request) {
-    auto optionalEmployee = employeeRepository->findById(employeeId);
+EmployeeSkill EmployeeService::addSkill(int userId, const SkillRequest& request) {
+    auto optionalEmployee = employeeRepository->findById(userId);
     if (!optionalEmployee.has_value()) {
-        throw NotFoundException("Employee with ID " + std::to_string(employeeId) + " not found.");
+        throw NotFoundException("Employee with ID " + std::to_string(userId) + " not found.");
     }
 
     validateSkillFields(request);
 
     EmployeeSkill skill;
-    skill.employeeId  = employeeId;
+    skill.userId      = userId;
     skill.skillName   = request.skillName;
     skill.category    = request.category;
     skill.proficiency = request.proficiency;
@@ -143,8 +136,8 @@ EmployeeSkill EmployeeService::addSkill(int employeeId, const SkillRequest& requ
     return skill;
 }
 
-void EmployeeService::updateSkill(int employeeId, int skillId, const SkillRequest& request) {
-    if (!skillRepository->skillBelongsToEmployee(skillId, employeeId)) {
+void EmployeeService::updateSkill(int userId, int skillId, const SkillRequest& request) {
+    if (!skillRepository->skillBelongsToUser(skillId, userId)) {
         throw NotFoundException("Skill not found for this employee.");
     }
 
@@ -152,7 +145,7 @@ void EmployeeService::updateSkill(int employeeId, int skillId, const SkillReques
 
     EmployeeSkill skill;
     skill.skillId     = skillId;
-    skill.employeeId  = employeeId;
+    skill.userId      = userId;
     skill.skillName   = request.skillName;
     skill.category    = request.category;
     skill.proficiency = request.proficiency;
@@ -160,9 +153,10 @@ void EmployeeService::updateSkill(int employeeId, int skillId, const SkillReques
     skillRepository->update(skill);
 }
 
-void EmployeeService::removeSkill(int employeeId, int skillId) {
-    if (!skillRepository->skillBelongsToEmployee(skillId, employeeId)) {
+void EmployeeService::removeSkill(int userId, int skillId) {
+    if (!skillRepository->skillBelongsToUser(skillId, userId)) {
         throw NotFoundException("Skill not found for this employee.");
     }
     skillRepository->remove(skillId);
 }
+

@@ -1,4 +1,4 @@
-#include "MySQLEmployeeRepository.hpp"
+﻿#include "MySQLEmployeeRepository.hpp"
 #include "../utils/AppException.hpp"
 
 #include <cppconn/prepared_statement.h>
@@ -7,11 +7,24 @@
 
 #include <memory>
 
+// Joins users + roles + resource_profile + resource_status to produce Employee rows.
+// resource_profile only exists for MANAGER/RESOURCE; LEFT JOIN includes ADMIN users.
+// resource_status only exists for RESOURCE; LEFT JOIN tolerated as before.
+static const std::string EMPLOYEE_SELECT =
+    "SELECT u.user_id, rp.manager_id, ro.role_name AS role, u.full_name, u.email, "
+    "COALESCE(rp.department, '') AS department, "
+    "COALESCE(rp.designation, '') AS designation, "
+    "COALESCE(rs.status, '') AS status, u.is_active "
+    "FROM users u "
+    "JOIN roles ro ON ro.role_id = u.role_id "
+    "LEFT JOIN resource_profile rp ON rp.user_id = u.user_id "
+    "LEFT JOIN resource_status rs ON rs.user_id = u.user_id ";
+
 Employee MySQLEmployeeRepository::mapRowToEmployee(sql::ResultSet* resultSet) {
     Employee employee;
-    employee.employeeId  = resultSet->getInt("employee_id");
     employee.userId      = resultSet->getInt("user_id");
     employee.managerId   = resultSet->isNull("manager_id") ? 0 : resultSet->getInt("manager_id");
+    employee.role        = resultSet->getString("role");
     employee.fullName    = resultSet->getString("full_name");
     employee.email       = resultSet->getString("email");
     employee.department  = resultSet->getString("department");
@@ -21,17 +34,13 @@ Employee MySQLEmployeeRepository::mapRowToEmployee(sql::ResultSet* resultSet) {
     return employee;
 }
 
-static const std::string SELECT_COLUMNS =
-    "SELECT employee_id, user_id, manager_id, full_name, email, department, designation, status, is_active "
-    "FROM employees ";
-
-std::optional<Employee> MySQLEmployeeRepository::findById(int employeeId) {
+std::optional<Employee> MySQLEmployeeRepository::findById(int userId) {
     try {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
-            connection->prepareStatement(SELECT_COLUMNS + "WHERE employee_id = ?")
+            connection->prepareStatement(EMPLOYEE_SELECT + "WHERE u.user_id = ?")
         );
-        statement->setInt(1, employeeId);
+        statement->setInt(1, userId);
         std::unique_ptr<sql::ResultSet> resultSet(statement->executeQuery());
         if (resultSet->next()) {
             return mapRowToEmployee(resultSet.get());
@@ -42,28 +51,11 @@ std::optional<Employee> MySQLEmployeeRepository::findById(int employeeId) {
     }
 }
 
-std::optional<Employee> MySQLEmployeeRepository::findByUserId(int userId) {
-    try {
-        auto connection = DatabasePool::getInstance().acquire();
-        std::unique_ptr<sql::PreparedStatement> statement(
-            connection->prepareStatement(SELECT_COLUMNS + "WHERE user_id = ?")
-        );
-        statement->setInt(1, userId);
-        std::unique_ptr<sql::ResultSet> resultSet(statement->executeQuery());
-        if (resultSet->next()) {
-            return mapRowToEmployee(resultSet.get());
-        }
-        return std::nullopt;
-    } catch (const sql::SQLException& sqlException) {
-        throw AppException(std::string("DB error in findByUserId: ") + sqlException.what());
-    }
-}
-
 std::vector<Employee> MySQLEmployeeRepository::findAll() {
     try {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
-            connection->prepareStatement(SELECT_COLUMNS + "ORDER BY employee_id")
+            connection->prepareStatement(EMPLOYEE_SELECT + "ORDER BY u.user_id")
         );
         std::unique_ptr<sql::ResultSet> resultSet(statement->executeQuery());
         std::vector<Employee> employees;
@@ -80,7 +72,7 @@ std::vector<Employee> MySQLEmployeeRepository::findAllActive() {
     try {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
-            connection->prepareStatement(SELECT_COLUMNS + "WHERE is_active = 1 ORDER BY employee_id")
+            connection->prepareStatement(EMPLOYEE_SELECT + "WHERE u.is_active = 1 ORDER BY u.user_id")
         );
         std::unique_ptr<sql::ResultSet> resultSet(statement->executeQuery());
         std::vector<Employee> employees;
@@ -93,33 +85,57 @@ std::vector<Employee> MySQLEmployeeRepository::findAllActive() {
     }
 }
 
-int MySQLEmployeeRepository::create(const Employee& employee) {
+std::vector<Employee> MySQLEmployeeRepository::findByManagerId(int managerUserId) {
     try {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
+            connection->prepareStatement(EMPLOYEE_SELECT + "WHERE rp.manager_id = ? ORDER BY u.user_id")
+        );
+        statement->setInt(1, managerUserId);
+        std::unique_ptr<sql::ResultSet> resultSet(statement->executeQuery());
+        std::vector<Employee> employees;
+        while (resultSet->next()) {
+            employees.push_back(mapRowToEmployee(resultSet.get()));
+        }
+        return employees;
+    } catch (const sql::SQLException& sqlException) {
+        throw AppException(std::string("DB error in findByManagerId: ") + sqlException.what());
+    }
+}
+
+int MySQLEmployeeRepository::create(const Employee& employee) {
+    try {
+        auto connection = DatabasePool::getInstance().acquire();
+
+        // Insert resource_profile (covers both RESOURCE and MANAGER)
+        std::unique_ptr<sql::PreparedStatement> profileStmt(
             connection->prepareStatement(
-                "INSERT INTO employees (user_id, manager_id, full_name, email, department, designation, status, is_active) "
-                "VALUES (?, ?, ?, ?, ?, ?, 'BENCH', 1)"
+                "INSERT INTO resource_profile (user_id, manager_id, department, designation) "
+                "VALUES (?, ?, ?, ?)"
             )
         );
-        statement->setInt(1, employee.userId);
+        profileStmt->setInt(1, employee.userId);
         if (employee.managerId > 0) {
-            statement->setInt(2, employee.managerId);
+            profileStmt->setInt(2, employee.managerId);
         } else {
-            statement->setNull(2, 0);
+            profileStmt->setNull(2, 0);
         }
-        statement->setString(3, employee.fullName);
-        statement->setString(4, employee.email);
-        statement->setString(5, employee.department);
-        statement->setString(6, employee.designation);
-        statement->executeUpdate();
+        profileStmt->setString(3, employee.department);
+        profileStmt->setString(4, employee.designation);
+        profileStmt->executeUpdate();
 
-        std::unique_ptr<sql::PreparedStatement> idStatement(
-            connection->prepareStatement("SELECT LAST_INSERT_ID()")
-        );
-        std::unique_ptr<sql::ResultSet> idResult(idStatement->executeQuery());
-        idResult->next();
-        return idResult->getInt(1);
+        // Insert resource_status only for RESOURCE (status field non-empty means RESOURCE)
+        if (!employee.status.empty()) {
+            std::unique_ptr<sql::PreparedStatement> statusStmt(
+                connection->prepareStatement(
+                    "INSERT INTO resource_status (user_id, status) VALUES (?, 'BENCH')"
+                )
+            );
+            statusStmt->setInt(1, employee.userId);
+            statusStmt->executeUpdate();
+        }
+
+        return employee.userId;
     } catch (const sql::SQLException& sqlException) {
         throw AppException(std::string("DB error in employee create: ") + sqlException.what());
     }
@@ -130,63 +146,61 @@ void MySQLEmployeeRepository::update(const Employee& employee) {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                "UPDATE employees SET full_name = ?, email = ?, department = ?, designation = ? "
-                "WHERE employee_id = ?"
+                "UPDATE resource_profile SET department = ?, designation = ? "
+                "WHERE user_id = ?"
             )
         );
-        statement->setString(1, employee.fullName);
-        statement->setString(2, employee.email);
-        statement->setString(3, employee.department);
-        statement->setString(4, employee.designation);
-        statement->setInt(5, employee.employeeId);
+        statement->setString(1, employee.department);
+        statement->setString(2, employee.designation);
+        statement->setInt(3, employee.userId);
         statement->executeUpdate();
     } catch (const sql::SQLException& sqlException) {
         throw AppException(std::string("DB error in employee update: ") + sqlException.what());
     }
 }
 
-void MySQLEmployeeRepository::setActiveStatus(int employeeId, bool active) {
+void MySQLEmployeeRepository::setActiveStatus(int userId, bool active) {
     try {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                "UPDATE employees SET is_active = ? WHERE employee_id = ?"
+                "UPDATE users SET is_active = ? WHERE user_id = ?"
             )
         );
         statement->setBoolean(1, active);
-        statement->setInt(2, employeeId);
+        statement->setInt(2, userId);
         statement->executeUpdate();
     } catch (const sql::SQLException& sqlException) {
         throw AppException(std::string("DB error in employee setActiveStatus: ") + sqlException.what());
     }
 }
 
-void MySQLEmployeeRepository::setStatus(int employeeId, const std::string& status) {
+void MySQLEmployeeRepository::setStatus(int userId, const std::string& status) {
     try {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                "UPDATE employees SET status = ? WHERE employee_id = ?"
+                "UPDATE resource_status SET status = ? WHERE user_id = ?"
             )
         );
         statement->setString(1, status);
-        statement->setInt(2, employeeId);
+        statement->setInt(2, userId);
         statement->executeUpdate();
     } catch (const sql::SQLException& sqlException) {
         throw AppException(std::string("DB error in employee setStatus: ") + sqlException.what());
     }
 }
 
-bool MySQLEmployeeRepository::hasActiveAllocations(int employeeId) {
+bool MySQLEmployeeRepository::hasActiveAllocations(int userId) {
     try {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
                 "SELECT COUNT(*) FROM allocations "
-                "WHERE employee_id = ? AND is_active = 1 AND to_date >= CURDATE()"
+                "WHERE user_id = ? AND is_active = 1 AND `to_date` >= CURDATE()"
             )
         );
-        statement->setInt(1, employeeId);
+        statement->setInt(1, userId);
         std::unique_ptr<sql::ResultSet> resultSet(statement->executeQuery());
         resultSet->next();
         return resultSet->getInt(1) > 0;
@@ -200,7 +214,7 @@ bool MySQLEmployeeRepository::existsByUserId(int userId) {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                "SELECT COUNT(*) FROM employees WHERE user_id = ?"
+                "SELECT COUNT(*) FROM resource_profile WHERE user_id = ?"
             )
         );
         statement->setInt(1, userId);
@@ -212,40 +226,20 @@ bool MySQLEmployeeRepository::existsByUserId(int userId) {
     }
 }
 
-std::vector<Employee> MySQLEmployeeRepository::findByManagerId(int managerEmployeeId) {
+void MySQLEmployeeRepository::assignManager(int userId, int managerUserId) {
     try {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                SELECT_COLUMNS + "WHERE manager_id = ? ORDER BY employee_id"
+                "UPDATE resource_profile SET manager_id = ? WHERE user_id = ?"
             )
         );
-        statement->setInt(1, managerEmployeeId);
-        std::unique_ptr<sql::ResultSet> resultSet(statement->executeQuery());
-        std::vector<Employee> employees;
-        while (resultSet->next()) {
-            employees.push_back(mapRowToEmployee(resultSet.get()));
-        }
-        return employees;
-    } catch (const sql::SQLException& sqlException) {
-        throw AppException(std::string("DB error in findByManagerId: ") + sqlException.what());
-    }
-}
-
-void MySQLEmployeeRepository::assignManager(int employeeId, int managerEmployeeId) {
-    try {
-        auto connection = DatabasePool::getInstance().acquire();
-        std::unique_ptr<sql::PreparedStatement> statement(
-            connection->prepareStatement(
-                "UPDATE employees SET manager_id = ? WHERE employee_id = ?"
-            )
-        );
-        if (managerEmployeeId > 0) {
-            statement->setInt(1, managerEmployeeId);
+        if (managerUserId > 0) {
+            statement->setInt(1, managerUserId);
         } else {
             statement->setNull(1, 0);
         }
-        statement->setInt(2, employeeId);
+        statement->setInt(2, userId);
         statement->executeUpdate();
     } catch (const sql::SQLException& sqlException) {
         throw AppException(std::string("DB error in assignManager: ") + sqlException.what());

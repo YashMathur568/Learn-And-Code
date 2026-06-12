@@ -24,15 +24,15 @@ static void showProjectDetail(const ApiClient& api, const nlohmann::json& proj) 
                       << ConsoleUtil::col("Due",   12)
                       << "Status\n";
             ConsoleUtil::printSeparator();
-            int i = 1;
-            for (const auto& m : ms) {
-                const std::string due    = m.value("dueDate", "");
-                const std::string status = m.value("status", "");
-                std::string title  = ConsoleUtil::trunc(m.value("title", ""), 22);
+            int milestoneIndex = 1;
+            for (const auto& milestone : ms) {
+                const std::string due    = milestone.value("dueDate", "");
+                const std::string status = milestone.value("status", "");
+                std::string title  = ConsoleUtil::trunc(milestone.value("title", ""), 22);
                 const bool overdue = (status != "DONE" && due < ConsoleUtil::lastMonday());
                 if (overdue) title += " ⚠";
 
-                std::cout << ConsoleUtil::col(std::to_string(i++), 4)
+                std::cout << ConsoleUtil::col(std::to_string(milestoneIndex++), 4)
                           << ConsoleUtil::col(title, 24)
                           << ConsoleUtil::col(ConsoleUtil::fmtDate(due), 12)
                           << status << (overdue ? "  OVERDUE" : "") << "\n";
@@ -48,12 +48,12 @@ static void showProjectDetail(const ApiClient& api, const nlohmann::json& proj) 
                       << ConsoleUtil::col("From",   12)
                       << "To\n";
             ConsoleUtil::printSeparator();
-            for (const auto& a : allocs) {
-                if (!a.value("isActive", false)) continue;
-                std::cout << ConsoleUtil::col(a.value("employeeName", ""), 22)
-                          << ConsoleUtil::col(std::to_string(a.value("allocationPercentage", 0)) + "%", 5)
-                          << ConsoleUtil::col(ConsoleUtil::fmtDate(a.value("fromDate", "")), 12)
-                          << ConsoleUtil::fmtDate(a.value("toDate", "")) << "\n";
+            for (const auto& allocation : allocs) {
+                if (!allocation.value("isActive", false)) continue;
+                std::cout << ConsoleUtil::col(allocation.value("employeeName", ""), 22)
+                          << ConsoleUtil::col(std::to_string(allocation.value("allocationPercentage", 0)) + "%", 5)
+                          << ConsoleUtil::col(ConsoleUtil::fmtDate(allocation.value("fromDate", "")), 12)
+                          << ConsoleUtil::fmtDate(allocation.value("toDate", "")) << "\n";
             }
         }
 
@@ -106,12 +106,12 @@ void showManagerProjects(const ApiClient& api) {
                   << "Health\n";
         ConsoleUtil::printSeparator();
 
-        int i = 1;
-        for (const auto& p : projects) {
-            const std::string health = p.value("healthStatus", "ON_TRACK");
-            std::cout << ConsoleUtil::col(std::to_string(i++), 4)
-                      << ConsoleUtil::col(ConsoleUtil::trunc(p.value("name",""),27),28)
-                      << ConsoleUtil::col(ConsoleUtil::fmtDate(p.value("endDate","")),12)
+        int projectIndex = 1;
+        for (const auto& project : projects) {
+            const std::string health = project.value("healthStatus", "ON_TRACK");
+            std::cout << ConsoleUtil::col(std::to_string(projectIndex++), 4)
+                      << ConsoleUtil::col(ConsoleUtil::trunc(project.value("name",""),27),28)
+                      << ConsoleUtil::col(ConsoleUtil::fmtDate(project.value("endDate","")),12)
                       << ConsoleUtil::healthIcon(health) << " " << health << "\n";
         }
         ConsoleUtil::printSeparator();

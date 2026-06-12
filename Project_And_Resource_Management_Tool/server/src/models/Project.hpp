@@ -11,4 +11,6 @@ struct Project {
     std::string status;
     int         managerId{0};
     std::string health;
+    int         totalStoryPoints{0};
+    int         completedStoryPoints{0};
 };

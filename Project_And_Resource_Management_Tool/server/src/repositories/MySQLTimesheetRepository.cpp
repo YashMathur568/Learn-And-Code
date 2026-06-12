@@ -10,7 +10,7 @@
 Timesheet MySQLTimesheetRepository::mapRowToTimesheet(sql::ResultSet* resultSet) {
     Timesheet timesheet;
     timesheet.timesheetId  = resultSet->getInt("timesheet_id");
-    timesheet.employeeId   = resultSet->getInt("employee_id");
+    timesheet.userId       = resultSet->getInt("user_id");
     timesheet.weekStart    = resultSet->getString("week_start");
     timesheet.status       = resultSet->getString("status");
     timesheet.submittedAt  = resultSet->isNull("submitted_at")
@@ -32,7 +32,7 @@ TimesheetEntry MySQLTimesheetRepository::mapRowToEntry(sql::ResultSet* resultSet
 }
 
 static const std::string SHEET_SELECT =
-    "SELECT timesheet_id, employee_id, week_start, status, submitted_at "
+    "SELECT timesheet_id, user_id, week_start, status, submitted_at "
     "FROM timesheets ";
 
 std::optional<Timesheet> MySQLTimesheetRepository::findById(int timesheetId) {
@@ -52,15 +52,15 @@ std::optional<Timesheet> MySQLTimesheetRepository::findById(int timesheetId) {
     }
 }
 
-std::optional<Timesheet> MySQLTimesheetRepository::findByEmployeeAndWeek(
-    int employeeId, const std::string& weekStart
+std::optional<Timesheet> MySQLTimesheetRepository::findByUserAndWeek(
+    int userId, const std::string& weekStart
 ) {
     try {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
-            connection->prepareStatement(SHEET_SELECT + "WHERE employee_id = ? AND week_start = ?")
+            connection->prepareStatement(SHEET_SELECT + "WHERE user_id = ? AND week_start = ?")
         );
-        statement->setInt(1, employeeId);
+        statement->setInt(1, userId);
         statement->setString(2, weekStart);
         std::unique_ptr<sql::ResultSet> resultSet(statement->executeQuery());
         if (resultSet->next()) {
@@ -68,17 +68,17 @@ std::optional<Timesheet> MySQLTimesheetRepository::findByEmployeeAndWeek(
         }
         return std::nullopt;
     } catch (const sql::SQLException& sqlException) {
-        throw AppException(std::string("DB error in findByEmployeeAndWeek: ") + sqlException.what());
+        throw AppException(std::string("DB error in findByUserAndWeek: ") + sqlException.what());
     }
 }
 
-std::vector<Timesheet> MySQLTimesheetRepository::findByEmployeeId(int employeeId) {
+std::vector<Timesheet> MySQLTimesheetRepository::findByUserId(int userId) {
     try {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
-            connection->prepareStatement(SHEET_SELECT + "WHERE employee_id = ? ORDER BY week_start DESC")
+            connection->prepareStatement(SHEET_SELECT + "WHERE user_id = ? ORDER BY week_start DESC")
         );
-        statement->setInt(1, employeeId);
+        statement->setInt(1, userId);
         std::unique_ptr<sql::ResultSet> resultSet(statement->executeQuery());
         std::vector<Timesheet> timesheets;
         while (resultSet->next()) {
@@ -86,25 +86,25 @@ std::vector<Timesheet> MySQLTimesheetRepository::findByEmployeeId(int employeeId
         }
         return timesheets;
     } catch (const sql::SQLException& sqlException) {
-        throw AppException(std::string("DB error in timesheet findByEmployeeId: ") + sqlException.what());
+        throw AppException(std::string("DB error in timesheet findByUserId: ") + sqlException.what());
     }
 }
 
 std::vector<Timesheet> MySQLTimesheetRepository::findByManagerTeam(
-    int managerEmployeeId, const std::string& weekStart
+    int managerUserId, const std::string& weekStart
 ) {
     try {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                "SELECT t.timesheet_id, t.employee_id, t.week_start, t.status, t.submitted_at "
+                "SELECT t.timesheet_id, t.user_id, t.week_start, t.status, t.submitted_at "
                 "FROM timesheets t "
-                "JOIN employees e ON t.employee_id = e.employee_id "
-                "WHERE e.manager_id = ? AND t.week_start = ? "
-                "ORDER BY t.employee_id"
+                "JOIN resource_profile rp ON t.user_id = rp.user_id "
+                "WHERE rp.manager_id = ? AND t.week_start = ? "
+                "ORDER BY t.user_id"
             )
         );
-        statement->setInt(1, managerEmployeeId);
+        statement->setInt(1, managerUserId);
         statement->setString(2, weekStart);
         std::unique_ptr<sql::ResultSet> resultSet(statement->executeQuery());
         std::vector<Timesheet> timesheets;
@@ -122,11 +122,11 @@ int MySQLTimesheetRepository::create(const Timesheet& timesheet) {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                "INSERT INTO timesheets (employee_id, week_start, status, submitted_at) "
+                "INSERT INTO timesheets (user_id, week_start, status, submitted_at) "
                 "VALUES (?, ?, 'SUBMITTED', NOW())"
             )
         );
-        statement->setInt(1, timesheet.employeeId);
+        statement->setInt(1, timesheet.userId);
         statement->setString(2, timesheet.weekStart);
         statement->executeUpdate();
 
@@ -181,19 +181,22 @@ void MySQLTimesheetRepository::addEntry(const TimesheetEntry& entry) {
     }
 }
 
-void MySQLTimesheetRepository::createMissed(int employeeId, const std::string& weekStart) {
+void MySQLTimesheetRepository::createMissed(int userId, const std::string& weekStart) {
     try {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                "INSERT IGNORE INTO timesheets (employee_id, week_start, status, submitted_at) "
+                "INSERT IGNORE INTO timesheets (user_id, week_start, status, submitted_at) "
                 "VALUES (?, ?, 'MISSED', NULL)"
             )
         );
-        statement->setInt(1, employeeId);
+        statement->setInt(1, userId);
         statement->setString(2, weekStart);
         statement->executeUpdate();
     } catch (const sql::SQLException& sqlException) {
         throw AppException(std::string("DB error in createMissed: ") + sqlException.what());
     }
 }
+
+
+

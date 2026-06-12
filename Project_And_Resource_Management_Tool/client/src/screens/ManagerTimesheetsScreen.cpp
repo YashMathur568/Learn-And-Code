@@ -15,7 +15,7 @@ void showManagerTimesheets(const ApiClient& api) {
 
         const std::string weekStart = weekInput.empty()
             ? ConsoleUtil::lastMonday()
-            : ConsoleUtil::toIsoDate(weekInput);
+            : ConsoleUtil::toWeekMonday(ConsoleUtil::toIsoDate(weekInput));
 
         const auto resp = api.get(
             "/api/manager/timesheets?weekStart=" + weekStart,

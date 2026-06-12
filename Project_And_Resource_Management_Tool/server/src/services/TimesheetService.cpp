@@ -52,7 +52,7 @@ bool TimesheetService::isWeekInFuture(const std::string& weekStart) {
     return weekTime > today;
 }
 
-TimesheetWithEntries TimesheetService::submitTimesheet(int employeeId, const SubmitTimesheetRequest& request) {
+TimesheetWithEntries TimesheetService::submitTimesheet(int userId, const SubmitTimesheetRequest& request) {
     if (request.entries.empty()) {
         throw ValidationException("Timesheet must contain at least one entry.");
     }
@@ -63,7 +63,7 @@ TimesheetWithEntries TimesheetService::submitTimesheet(int employeeId, const Sub
         throw ValidationException("Cannot submit a timesheet for a future week.");
     }
 
-    const auto existing = timesheetRepository->findByEmployeeAndWeek(employeeId, request.weekStart);
+    const auto existing = timesheetRepository->findByUserAndWeek(userId, request.weekStart);
     if (existing.has_value()) {
         throw ConflictException("A timesheet for this week has already been submitted.");
     }
@@ -76,7 +76,7 @@ TimesheetWithEntries TimesheetService::submitTimesheet(int employeeId, const Sub
         if (entryRequest.hours <= 0) {
             throw ValidationException("Entry hours must be greater than zero.");
         }
-        if (!allocationRepository->isActivelyAllocated(employeeId, entryRequest.projectId)) {
+        if (!allocationRepository->isActivelyAllocated(userId, entryRequest.projectId)) {
             throw ValidationException(
                 "Employee is not actively allocated to project " +
                 std::to_string(entryRequest.projectId) + "."
@@ -94,14 +94,14 @@ TimesheetWithEntries TimesheetService::submitTimesheet(int employeeId, const Sub
     }
 
     Timesheet timesheet;
-    timesheet.employeeId = employeeId;
-    timesheet.weekStart  = request.weekStart;
-    timesheet.status     = "SUBMITTED";
+    timesheet.userId    = userId;
+    timesheet.weekStart = request.weekStart;
+    timesheet.status    = "SUBMITTED";
 
     const int timesheetId = timesheetRepository->create(timesheet);
 
     TimesheetWithEntries result;
-    result.timesheet             = timesheetRepository->findById(timesheetId).value();
+    result.timesheet = timesheetRepository->findById(timesheetId).value();
 
     for (const auto& entryRequest : request.entries) {
         TimesheetEntry entry;
@@ -116,8 +116,8 @@ TimesheetWithEntries TimesheetService::submitTimesheet(int employeeId, const Sub
     return result;
 }
 
-std::vector<TimesheetWithEntries> TimesheetService::getByEmployeeId(int employeeId) {
-    const auto timesheets = timesheetRepository->findByEmployeeId(employeeId);
+std::vector<TimesheetWithEntries> TimesheetService::getByUserId(int userId) {
+    const auto timesheets = timesheetRepository->findByUserId(userId);
     std::vector<TimesheetWithEntries> result;
     result.reserve(timesheets.size());
     for (const auto& timesheet : timesheets) {
@@ -130,9 +130,9 @@ std::vector<TimesheetWithEntries> TimesheetService::getByEmployeeId(int employee
 }
 
 std::vector<TimesheetWithEntries> TimesheetService::getTeamTimesheets(
-    int managerEmployeeId, const std::string& weekStart
+    int managerUserId, const std::string& weekStart
 ) {
-    const auto timesheets = timesheetRepository->findByManagerTeam(managerEmployeeId, weekStart);
+    const auto timesheets = timesheetRepository->findByManagerTeam(managerUserId, weekStart);
     std::vector<TimesheetWithEntries> result;
     result.reserve(timesheets.size());
     for (const auto& timesheet : timesheets) {

@@ -11,19 +11,17 @@ class MySQLEmployeeRepository : public IEmployeeRepository {
 public:
     MySQLEmployeeRepository() = default;
 
-    std::optional<Employee> findById(int employeeId)                     override;
-    std::optional<Employee> findByUserId(int userId)                     override;
+    std::optional<Employee> findById(int userId)                         override;
     std::vector<Employee>   findAll()                                    override;
     std::vector<Employee>   findAllActive()                              override;
-    std::vector<Employee>   findByManagerId(int managerEmployeeId)       override;
+    std::vector<Employee>   findByManagerId(int managerUserId)           override;
     int                     create(const Employee& employee)             override;
     void                    update(const Employee& employee)             override;
-    void                    setActiveStatus(int employeeId, bool active) override;
-    void                    setStatus(int employeeId,
+    void                    setActiveStatus(int userId, bool active)     override;
+    void                    setStatus(int userId,
                                       const std::string& status)         override;
-    void                    assignManager(int employeeId,
-                                          int managerEmployeeId)         override;
-    bool                    hasActiveAllocations(int employeeId)         override;
+    void                    assignManager(int userId, int managerUserId) override;
+    bool                    hasActiveAllocations(int userId)             override;
     bool                    existsByUserId(int userId)                   override;
 
 private:

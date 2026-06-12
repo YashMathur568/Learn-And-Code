@@ -9,19 +9,22 @@
 
 Project MySQLProjectRepository::mapRowToProject(sql::ResultSet* resultSet) {
     Project project;
-    project.projectId   = resultSet->getInt("project_id");
-    project.name        = resultSet->getString("name");
-    project.description = resultSet->getString("description");
-    project.startDate   = resultSet->getString("start_date");
-    project.endDate     = resultSet->getString("end_date");
-    project.status      = resultSet->getString("status");
-    project.managerId   = resultSet->getInt("manager_id");
-    project.health      = resultSet->getString("health");
+    project.projectId             = resultSet->getInt("project_id");
+    project.name                  = resultSet->getString("name");
+    project.description           = resultSet->getString("description");
+    project.startDate             = resultSet->getString("start_date");
+    project.endDate               = resultSet->getString("end_date");
+    project.status                = resultSet->getString("status");
+    project.managerId             = resultSet->getInt("manager_id");
+    project.health                = resultSet->getString("health");
+    project.totalStoryPoints      = resultSet->getInt("total_story_points");
+    project.completedStoryPoints  = resultSet->getInt("completed_story_points");
     return project;
 }
 
 static const std::string PROJECT_SELECT =
-    "SELECT project_id, name, description, start_date, end_date, status, manager_id, health "
+    "SELECT project_id, name, description, start_date, end_date, status, manager_id, health, "
+    "total_story_points, completed_story_points "
     "FROM projects ";
 
 std::optional<Project> MySQLProjectRepository::findById(int projectId) {
@@ -81,8 +84,8 @@ int MySQLProjectRepository::create(const Project& project) {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                "INSERT INTO projects (name, description, start_date, end_date, status, manager_id, health) "
-                "VALUES (?, ?, ?, ?, ?, ?, 'ON_TRACK')"
+                "INSERT INTO projects (name, description, start_date, end_date, status, manager_id, health, total_story_points) "
+                "VALUES (?, ?, ?, ?, ?, ?, 'ON_TRACK', ?)"
             )
         );
         statement->setString(1, project.name);
@@ -91,6 +94,7 @@ int MySQLProjectRepository::create(const Project& project) {
         statement->setString(4, project.endDate);
         statement->setString(5, project.status);
         statement->setInt(6, project.managerId);
+        statement->setInt(7, project.totalStoryPoints);
         statement->executeUpdate();
 
         std::unique_ptr<sql::PreparedStatement> idStatement(
@@ -110,7 +114,7 @@ void MySQLProjectRepository::update(const Project& project) {
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
                 "UPDATE projects SET name = ?, description = ?, start_date = ?, "
-                "end_date = ?, status = ?, manager_id = ? WHERE project_id = ?"
+                "end_date = ?, status = ?, manager_id = ?, total_story_points = ? WHERE project_id = ?"
             )
         );
         statement->setString(1, project.name);
@@ -119,7 +123,8 @@ void MySQLProjectRepository::update(const Project& project) {
         statement->setString(4, project.endDate);
         statement->setString(5, project.status);
         statement->setInt(6, project.managerId);
-        statement->setInt(7, project.projectId);
+        statement->setInt(7, project.totalStoryPoints);
+        statement->setInt(8, project.projectId);
         statement->executeUpdate();
     } catch (const sql::SQLException& sqlException) {
         throw AppException(std::string("DB error in project update: ") + sqlException.what());

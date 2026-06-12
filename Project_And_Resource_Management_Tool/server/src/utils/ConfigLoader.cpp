@@ -31,6 +31,8 @@ void ConfigLoader::load(const std::string& filePath) {
         appConfig.llm.apiKey      = jsonConfig.at("llm").at("apiKey").get<std::string>();
         appConfig.llm.geminiModel = jsonConfig.at("llm").at("geminiModel").get<std::string>();
         appConfig.llm.groqModel   = jsonConfig.at("llm").at("groqModel").get<std::string>();
+        appConfig.llm.companyHost  = jsonConfig.value(nlohmann::json::json_pointer("/llm/companyHost"),  std::string(""));
+        appConfig.llm.companyModel = jsonConfig.value(nlohmann::json::json_pointer("/llm/companyModel"), std::string(""));
 
         appConfig.schedulerIntervalHours = jsonConfig.at("schedulerIntervalHours").get<int>();
         appConfig.maxWeeklyHours         = jsonConfig.at("maxWeeklyHours").get<int>();

@@ -4,42 +4,35 @@
 
 #include <iostream>
 
-// ── Shared: show AI match results and let user pick ───────────────────────────
-static int showMatchResults(const nlohmann::json& results) {
+// ── Shared: show AI match results (view-only) ───────────────────────────────
+static void showMatchResults(const nlohmann::json& results) {
     if (results.empty()) {
         ConsoleUtil::printInfo("No matching employees found.");
-        return -1;
+        ConsoleUtil::pause(); return;
     }
     ConsoleUtil::printSeparator();
     std::cout << "AI-MATCHED RESULTS\n";
     ConsoleUtil::printSeparator();
-    int i = 1;
-    for (const auto& r : results) {
+    int itemIndex = 1;
+    for (const auto& matchResult : results) {
         std::string skills;
-        for (const auto& s : r.value("skills", nlohmann::json::array())) {
+        for (const auto& skill : matchResult.value("skills", nlohmann::json::array())) {
             if (!skills.empty()) skills += ", ";
-            skills += s.value("skillName", "");
+            skills += skill.value("skillName", "");
         }
-        std::cout << i++ << ".  " << r.value("fullName", "") << "\n";
-        std::cout << "    Status : " << r.value("status", "")
-                  << "   Score: " << r.value("relevanceScore", 0) << "/10\n";
+        std::cout << itemIndex++ << ".  " << matchResult.value("fullName", "") << "\n";
+        std::cout << "    Status : " << matchResult.value("status", "")
+                  << "   Score: " << matchResult.value("relevanceScore", 0) << "/10\n";
         std::cout << "    Skills : " << ConsoleUtil::trunc(skills, 50) << "\n";
-        std::cout << "    Reason : " << ConsoleUtil::trunc(r.value("reason", ""), 60) << "\n\n";
+        std::cout << "    Reason : " << ConsoleUtil::trunc(matchResult.value("reason", ""), 60) << "\n\n";
     }
-    ConsoleUtil::printInfo("Note: AI-generated. Verify before confirming.");
+    ConsoleUtil::printInfo("Note: AI-generated. Use Employee ID above for Direct Allocation.");
     ConsoleUtil::printSeparator();
-
-    std::cout << "\nSelect # (or 0 to cancel): ";
-    std::string sel;
-    std::getline(std::cin, sel);
-    int idx = 0;
-    try { idx = std::stoi(sel); } catch (...) { return -1; }
-    if (idx <= 0 || idx > static_cast<int>(results.size())) return -1;
-    return results[idx - 1].value("employeeId", -1);
+    ConsoleUtil::pause();
 }
 
 // ── Confirm and submit allocation ─────────────────────────────────────────────
-static void confirmAndAllocate(const ApiClient& api, int employeeId, const std::string& empName) {
+static void confirmAndAllocate(const ApiClient& api, int userId, const std::string& empName) {
     std::cout << "\n── " << empName << " ──\n";
     const std::string pctStr  = ConsoleUtil::promptInput("Utilisation %  : ");
     const std::string from    = ConsoleUtil::promptInput("From Date (DD-MM-YYYY): ");
@@ -50,22 +43,38 @@ static void confirmAndAllocate(const ApiClient& api, int employeeId, const std::
     try { pct = std::stoi(pctStr); } catch (...) {}
     try { pid = std::stoi(projId); } catch (...) {}
 
+    const std::string fromIso = ConsoleUtil::toIsoDate(from);
+    const std::string toIso   = ConsoleUtil::toIsoDate(to);
+
+    if (fromIso.empty()) {
+        ConsoleUtil::printError("Invalid from date. Use DD-MM-YYYY (e.g. 01-07-2026).");
+        ConsoleUtil::pause(); return;
+    }
+    if (toIso.empty()) {
+        ConsoleUtil::printError("Invalid to date. Use DD-MM-YYYY (e.g. 31-12-2026).");
+        ConsoleUtil::pause(); return;
+    }
+    if (fromIso >= toIso) {
+        ConsoleUtil::printError("From date must be before to date.");
+        ConsoleUtil::pause(); return;
+    }
+
     std::cout << "\nValidating...\n";
 
     const auto resp = api.post("/api/manager/allocations", {
-        {"employeeId",            employeeId},
-        {"projectId",             pid},
-        {"allocationPercentage",  pct},
-        {"fromDate",              ConsoleUtil::toIsoDate(from)},
-        {"toDate",                ConsoleUtil::toIsoDate(to)}
+        {"userId",       userId},
+        {"projectId",   pid},
+        {"utilisation", pct},
+        {"fromDate",    fromIso},
+        {"toDate",      toIso}
     }, AppSession::get().token);
 
     if (!resp.success) ConsoleUtil::printError(resp.errorMessage);
     else {
-        const auto& a = resp.body.contains("data") ? resp.body["data"] : resp.body;
+        const auto& allocation = resp.body.contains("data") ? resp.body["data"] : resp.body;
         ConsoleUtil::printSuccess(
-            empName + " → Project " + std::to_string(a.value("projectId", pid))
-            + " (" + std::to_string(a.value("allocationPercentage", pct)) + "%)"
+            empName + " → Project " + std::to_string(allocation.value("projectId", pid))
+            + " (" + std::to_string(allocation.value("allocationPercentage", pct)) + "%)"
         );
     }
     ConsoleUtil::pause();
@@ -94,15 +103,7 @@ static void aiAssistedAllocate(const ApiClient& api) {
     ConsoleUtil::printHeader("AI-MATCHED RESULTS");
 
     const auto& results = resp.body.value("data", nlohmann::json::array());
-    const int empId = showMatchResults(results);
-    if (empId < 0) return;
-
-    std::string empName;
-    for (const auto& r : results) {
-        if (r.value("employeeId", -1) == empId) { empName = r.value("fullName", ""); break; }
-    }
-
-    confirmAndAllocate(api, empId, empName);
+    showMatchResults(results);
 }
 
 // ── Direct allocation ─────────────────────────────────────────────────────────
@@ -116,9 +117,10 @@ static void directAllocate(const ApiClient& api) {
     const auto empResp = api.get("/api/manager/employees/" + idStr, AppSession::get().token);
     if (!empResp.success) { ConsoleUtil::printError(empResp.errorMessage); ConsoleUtil::pause(); return; }
 
-    const auto& e       = empResp.body.contains("data") ? empResp.body["data"] : empResp.body;
-    const std::string   empName = e.value("fullName", "");
-    const int           empId   = e.value("employeeId", 0);
+    const auto& data         = empResp.body.contains("data") ? empResp.body["data"] : empResp.body;
+    const auto& employeeData  = data.contains("employee") ? data["employee"] : data;
+    const std::string empName = employeeData.value("fullName", "");
+    const int         empId   = employeeData.value("userId", 0);
 
     confirmAndAllocate(api, empId, empName);
 }
@@ -147,15 +149,15 @@ static void endAllocation(const ApiClient& api) {
     ConsoleUtil::printSeparator();
 
     std::vector<int> allocIds;
-    int i = 1;
-    for (const auto& a : allocs) {
-        if (!a.value("isActive", false)) continue;
-        allocIds.push_back(a.value("allocationId", 0));
-        std::cout << ConsoleUtil::col(std::to_string(i++), 4)
-                  << ConsoleUtil::col(a.value("employeeName", ""), 22)
-                  << ConsoleUtil::col(std::to_string(a.value("allocationPercentage", 0)) + "%", 5)
-                  << ConsoleUtil::col(ConsoleUtil::fmtDate(a.value("fromDate", "")), 12)
-                  << ConsoleUtil::fmtDate(a.value("toDate", "")) << "\n";
+    int itemIndex = 1;
+    for (const auto& allocation : allocs) {
+        if (!allocation.value("isActive", false)) continue;
+        allocIds.push_back(allocation.value("allocationId", 0));
+        std::cout << ConsoleUtil::col(std::to_string(itemIndex++), 4)
+                  << ConsoleUtil::col(allocation.value("employeeName", ""), 22)
+                  << ConsoleUtil::col(std::to_string(allocation.value("allocationPercentage", 0)) + "%", 5)
+                  << ConsoleUtil::col(ConsoleUtil::fmtDate(allocation.value("fromDate", "")), 12)
+                  << ConsoleUtil::fmtDate(allocation.value("toDate", "")) << "\n";
     }
 
     if (allocIds.empty()) { ConsoleUtil::printInfo("No active allocations."); ConsoleUtil::pause(); return; }

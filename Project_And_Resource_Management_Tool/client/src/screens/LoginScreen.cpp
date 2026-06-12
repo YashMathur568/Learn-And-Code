@@ -44,7 +44,6 @@ bool showLoginScreen(const ApiClient& api) {
     session.username           = user.value("username", username);
     session.fullName           = user.value("fullName", username);
     session.role               = user.value("role", "");
-    session.employeeId         = user.value("employeeId", 0);
 
     if (session.forcePasswordChange) {
         return showChangePasswordScreen(api);

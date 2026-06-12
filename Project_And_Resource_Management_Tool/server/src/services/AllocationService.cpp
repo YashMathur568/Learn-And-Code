@@ -1,5 +1,6 @@
 #include "AllocationService.hpp"
 #include "../utils/AppException.hpp"
+#include "../utils/DateUtils.hpp"
 
 AllocationService::AllocationService(
     std::shared_ptr<IAllocationRepository> allocationRepository,
@@ -9,9 +10,15 @@ AllocationService::AllocationService(
     employeeRepository(std::move(employeeRepository)),
     projectRepository(std::move(projectRepository)) {}
 
-Allocation AllocationService::createAllocation(int managerEmployeeId, const CreateAllocationRequest& request) {
+Allocation AllocationService::createAllocation(int managerUserId, const CreateAllocationRequest& request) {
     if (request.utilisation < 1 || request.utilisation > 100) {
         throw ValidationException("Utilisation must be between 1 and 100.");
+    }
+    if (!isValidIsoDate(request.fromDate)) {
+        throw ValidationException("fromDate is not a valid date. Expected DD-MM-YYYY.");
+    }
+    if (!isValidIsoDate(request.toDate)) {
+        throw ValidationException("toDate is not a valid date. Expected DD-MM-YYYY.");
     }
     if (request.fromDate >= request.toDate) {
         throw ValidationException("fromDate must be before toDate.");
@@ -21,11 +28,24 @@ Allocation AllocationService::createAllocation(int managerEmployeeId, const Crea
     if (!project.has_value()) {
         throw NotFoundException("Project not found.");
     }
-    if (project->managerId != managerEmployeeId) {
+    if (project->managerId != managerUserId) {
         throw UnauthorizedException("You do not manage this project.");
     }
+    if (project->endDate < todayIso()) {
+        throw ValidationException("Cannot allocate to a project that has already ended.");
+    }
+    if (request.fromDate < project->startDate) {
+        throw ValidationException(
+            "fromDate cannot be before the project start date (" + project->startDate + ")."
+        );
+    }
+    if (request.toDate > project->endDate) {
+        throw ValidationException(
+            "toDate cannot be after the project end date (" + project->endDate + ")."
+        );
+    }
 
-    auto employee = employeeRepository->findById(request.employeeId);
+    auto employee = employeeRepository->findById(request.userId);
     if (!employee.has_value()) {
         throw NotFoundException("Employee not found.");
     }
@@ -33,7 +53,7 @@ Allocation AllocationService::createAllocation(int managerEmployeeId, const Crea
         throw ValidationException("Cannot allocate an inactive employee.");
     }
 
-    const int currentUtilisation = allocationRepository->getTotalActiveUtilisation(request.employeeId);
+    const int currentUtilisation = allocationRepository->getTotalActiveUtilisation(request.userId);
     if (currentUtilisation + request.utilisation > 100) {
         throw ValidationException(
             "Allocation would exceed 100% utilisation. Current: " +
@@ -43,19 +63,19 @@ Allocation AllocationService::createAllocation(int managerEmployeeId, const Crea
     }
 
     Allocation allocation;
-    allocation.employeeId  = request.employeeId;
+    allocation.userId       = request.userId;
     allocation.projectId   = request.projectId;
     allocation.utilisation = request.utilisation;
     allocation.fromDate    = request.fromDate;
     allocation.toDate      = request.toDate;
 
     const int allocationId = allocationRepository->create(allocation);
-    employeeRepository->setStatus(request.employeeId, "ALLOCATED");
+    employeeRepository->setStatus(request.userId, "ALLOCATED");
     allocation.allocationId = allocationId;
     return allocation;
 }
 
-Allocation AllocationService::endAllocation(int allocationId, int managerEmployeeId) {
+Allocation AllocationService::endAllocation(int allocationId, int managerUserId) {
     auto allocation = allocationRepository->findById(allocationId);
     if (!allocation.has_value()) {
         throw NotFoundException("Allocation not found.");
@@ -68,32 +88,33 @@ Allocation AllocationService::endAllocation(int allocationId, int managerEmploye
     if (!project.has_value()) {
         throw NotFoundException("Project not found.");
     }
-    if (project->managerId != managerEmployeeId) {
+    if (project->managerId != managerUserId) {
         throw UnauthorizedException("You do not manage this project.");
     }
 
     allocationRepository->end(allocationId);
 
-    if (!employeeRepository->hasActiveAllocations(allocation->employeeId)) {
-        employeeRepository->setStatus(allocation->employeeId, "BENCH");
+    if (!employeeRepository->hasActiveAllocations(allocation->userId)) {
+        employeeRepository->setStatus(allocation->userId, "BENCH");
     }
 
     allocation->isActive = false;
     return allocation.value();
 }
 
-std::vector<Allocation> AllocationService::getByEmployeeId(int employeeId) {
-    return allocationRepository->findByEmployeeId(employeeId);
+std::vector<Allocation> AllocationService::getByUserId(int userId) {
+    return allocationRepository->findByUserId(userId);
 }
 
-std::vector<Allocation> AllocationService::getActiveByEmployeeId(int employeeId) {
-    return allocationRepository->findActiveByEmployeeId(employeeId);
+std::vector<Allocation> AllocationService::getActiveByUserId(int userId) {
+    return allocationRepository->findActiveByUserId(userId);
 }
 
 std::vector<Allocation> AllocationService::getActiveByProjectId(int projectId) {
     return allocationRepository->findActiveByProjectId(projectId);
 }
 
-int AllocationService::getTotalUtilisation(int employeeId) {
-    return allocationRepository->getTotalActiveUtilisation(employeeId);
+int AllocationService::getTotalUtilisation(int userId) {
+    return allocationRepository->getTotalActiveUtilisation(userId);
 }
+

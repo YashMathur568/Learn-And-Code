@@ -6,6 +6,7 @@
 
 const std::vector<std::string> ConfigService::ALLOWED_KEYS = {
     "llm_provider",
+    "llm_api_key",
     "scheduler_interval_hours",
     "max_weekly_hours"
 };

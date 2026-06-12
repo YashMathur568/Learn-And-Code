@@ -11,7 +11,6 @@
 static constexpr int TOKEN_VALIDITY_HOURS = 8;
 static constexpr auto JWT_ALGORITHM       = "HS256";
 static constexpr auto CLAIM_ROLE          = "role";
-static constexpr auto CLAIM_EMPLOYEE_ID   = "employeeId";
 static constexpr auto CLAIM_USER_ID       = "userId";
 static constexpr auto JWT_ISSUER          = "prm-server";
 
@@ -19,7 +18,7 @@ std::string JwtUtil::getSecret() {
     return ConfigLoader::getInstance().getConfig().jwtSecret;
 }
 
-std::string JwtUtil::generate(int userId, const std::string& role, int employeeId) {
+std::string JwtUtil::generate(int userId, const std::string& role) {
     const auto now        = std::chrono::system_clock::now();
     const auto expiration = now + std::chrono::hours(TOKEN_VALIDITY_HOURS);
 
@@ -29,9 +28,8 @@ std::string JwtUtil::generate(int userId, const std::string& role, int employeeI
         .set_issuer(JWT_ISSUER)
         .set_issued_at(now)
         .set_expires_at(expiration)
-        .set_payload_claim(CLAIM_USER_ID,     claim(std::to_string(userId)))
-        .set_payload_claim(CLAIM_ROLE,        claim(role))
-        .set_payload_claim(CLAIM_EMPLOYEE_ID, claim(std::to_string(employeeId)))
+        .set_payload_claim(CLAIM_USER_ID, claim(std::to_string(userId)))
+        .set_payload_claim(CLAIM_ROLE,    claim(role))
         .sign(jwt::algorithm::hs256{getSecret()});
 }
 
@@ -45,10 +43,9 @@ TokenClaims JwtUtil::verify(const std::string& token) {
         verifier.verify(decoded);
 
         TokenClaims claims;
-        claims.userId     = std::stoi(decoded.get_payload_claim(CLAIM_USER_ID).as_string());
-        claims.role       = decoded.get_payload_claim(CLAIM_ROLE).as_string();
-        claims.employeeId = std::stoi(decoded.get_payload_claim(CLAIM_EMPLOYEE_ID).as_string());
-        claims.exp        = std::chrono::system_clock::to_time_t(decoded.get_expires_at());
+        claims.userId = std::stoi(decoded.get_payload_claim(CLAIM_USER_ID).as_string());
+        claims.role   = decoded.get_payload_claim(CLAIM_ROLE).as_string();
+        claims.exp    = std::chrono::system_clock::to_time_t(decoded.get_expires_at());
 
         return claims;
 

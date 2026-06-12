@@ -20,12 +20,12 @@ RiskSummaryService::RiskSummaryService(
     , timesheetRepository_(std::move(timesheetRepository))
     , employeeRepository_(std::move(employeeRepository)) {}
 
-std::string RiskSummaryService::generateSummary(int projectId, int managerEmployeeId) {
+std::string RiskSummaryService::generateSummary(int projectId, int managerUserId) {
     auto optProject = projectRepository_->findById(projectId);
     if (!optProject.has_value()) {
         throw NotFoundException("Project with ID " + std::to_string(projectId) + " not found.");
     }
-    if (optProject->managerId != managerEmployeeId) {
+    if (optProject->managerId != managerUserId) {
         throw UnauthorizedException("You do not manage this project.");
     }
 
@@ -65,12 +65,12 @@ std::string RiskSummaryService::buildFactsPrompt(int projectId) const {
     facts << "\nActive Team (" << allocations.size() << " allocations):\n";
     int missedCount = 0;
     for (const auto& alloc : allocations) {
-        auto emp = employeeRepository_->findById(alloc.employeeId);
+        auto emp = employeeRepository_->findById(alloc.userId);
         const std::string empName = emp.has_value() ? emp->fullName : "Unknown";
         facts << "  - " << empName << " | " << alloc.utilisation << "% | "
               << alloc.fromDate << " to " << alloc.toDate << "\n";
 
-        const auto recentTimesheets = timesheetRepository_->findByEmployeeId(alloc.employeeId);
+        const auto recentTimesheets = timesheetRepository_->findByUserId(alloc.userId);
         int missedForEmployee = 0;
         for (const auto& ts : recentTimesheets) {
             if (ts.status == "MISSED") {

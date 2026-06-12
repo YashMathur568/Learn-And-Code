@@ -14,6 +14,7 @@ struct CreateUserRequest {
     std::string role;
     std::string department;
     std::string designation;
+    int         managerId{0};  // Required when role == RESOURCE
 
     static CreateUserRequest fromJson(const nlohmann::json& body) {
         CreateUserRequest request;
@@ -24,6 +25,7 @@ struct CreateUserRequest {
         request.role         = body.at("role").get<std::string>();
         request.department   = body.value("department", "");
         request.designation  = body.value("designation", "");
+        request.managerId    = body.value("managerId", 0);
         return request;
     }
 };
@@ -39,11 +41,11 @@ struct ResetPasswordRequest {
 };
 
 struct AssignManagerRequest {
-    int managerEmployeeId{0};
+    int managerId{0};
 
     static AssignManagerRequest fromJson(const nlohmann::json& body) {
         AssignManagerRequest request;
-        request.managerEmployeeId = body.at("managerEmployeeId").get<int>();
+        request.managerId = body.at("managerId").get<int>();
         return request;
     }
 };
@@ -86,15 +88,15 @@ inline nlohmann::json userToJson(const User& user) {
         {"username",           user.username},
         {"role",               user.role},
         {"isActive",           user.isActive},
-        {"forcePasswordChange",user.forcePwdChange},
+        {"passwordExpiresAt",  user.passwordExpiresAt},
         {"createdAt",          user.createdAt}
     };
 }
 
 inline nlohmann::json employeeToJson(const Employee& employee) {
     nlohmann::json json = {
-        {"employeeId",  employee.employeeId},
         {"userId",      employee.userId},
+        {"role",        employee.role},
         {"fullName",    employee.fullName},
         {"email",       employee.email},
         {"department",  employee.department},
@@ -113,7 +115,7 @@ inline nlohmann::json employeeToJson(const Employee& employee) {
 inline nlohmann::json skillToJson(const EmployeeSkill& skill) {
     return {
         {"skillId",     skill.skillId},
-        {"employeeId",  skill.employeeId},
+        {"userId",      skill.userId},
         {"skillName",   skill.skillName},
         {"category",    skill.category},
         {"proficiency", skill.proficiency}

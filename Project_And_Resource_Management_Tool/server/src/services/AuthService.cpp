@@ -3,14 +3,13 @@
 #include "../security/PasswordUtil.hpp"
 #include "../utils/AppException.hpp"
 
+#include <ctime>
 #include <memory>
 
 AuthService::AuthService(
-    std::shared_ptr<IUserRepository>     userRepository,
-    std::shared_ptr<IEmployeeRepository> employeeRepository
+    std::shared_ptr<IUserRepository> userRepository
 )
-    : userRepository(std::move(userRepository))
-    , employeeRepository(std::move(employeeRepository)) {}
+    : userRepository(std::move(userRepository)) {}
 
 LoginResponse AuthService::login(const LoginRequest& request) {
     auto optionalUser = userRepository->findByUsername(request.username);
@@ -29,20 +28,36 @@ LoginResponse AuthService::login(const LoginRequest& request) {
         throw UnauthorizedException("Invalid username or password.");
     }
 
-    int resolvedEmployeeId = 0;
-    if (user.role != "ADMIN") {
-        auto optionalEmployee = employeeRepository->findByUserId(user.userId);
-        if (optionalEmployee.has_value()) {
-            resolvedEmployeeId = optionalEmployee->employeeId;
-        }
-    }
+    const std::string token = JwtUtil::generate(user.userId, user.role);
 
-    const std::string token = JwtUtil::generate(user.userId, user.role, resolvedEmployeeId);
+    // password_expires_at <= NOW()  =>  force change
+    bool forceChange = false;
+    if (!user.passwordExpiresAt.empty()) {
+        // Parse "YYYY-MM-DD HH:MM:SS" into time_t for comparison
+        std::tm tm{};
+        int year, month, day, hour, minute, second;
+        if (std::sscanf(user.passwordExpiresAt.c_str(), "%d-%d-%d %d:%d:%d",
+                        &year, &month, &day, &hour, &minute, &second) == 6) {
+            tm.tm_year  = year - 1900;
+            tm.tm_mon   = month - 1;
+            tm.tm_mday  = day;
+            tm.tm_hour  = hour;
+            tm.tm_min   = minute;
+            tm.tm_sec   = second;
+            tm.tm_isdst = -1;
+            std::time_t expiry = std::mktime(&tm);
+            forceChange = (expiry <= std::time(nullptr));
+        } else {
+            forceChange = true; // unparseable → treat as expired
+        }
+    } else {
+        forceChange = true; // null → treat as expired
+    }
 
     LoginResponse response;
     response.token              = token;
     response.role               = user.role;
-    response.forcePasswordChange = user.forcePwdChange;
+    response.forcePasswordChange = forceChange;
     return response;
 }
 
@@ -65,9 +80,30 @@ void AuthService::changePassword(int userId, const ChangePasswordRequest& reques
 
     const User& user = optionalUser.value();
 
-    // When force_pwd_change is set the user already proved their identity at login;
-    // skip the current-password check so the forced-change flow works without it.
-    if (!user.forcePwdChange) {
+    // When password is expired the user proved identity at login; skip current-password check.
+    bool isExpired = false;
+    if (!user.passwordExpiresAt.empty()) {
+        std::tm tm{};
+        int year, month, day, hour, minute, second;
+        if (std::sscanf(user.passwordExpiresAt.c_str(), "%d-%d-%d %d:%d:%d",
+                        &year, &month, &day, &hour, &minute, &second) == 6) {
+            tm.tm_year  = year - 1900;
+            tm.tm_mon   = month - 1;
+            tm.tm_mday  = day;
+            tm.tm_hour  = hour;
+            tm.tm_min   = minute;
+            tm.tm_sec   = second;
+            tm.tm_isdst = -1;
+            std::time_t expiry = std::mktime(&tm);
+            isExpired = (expiry <= std::time(nullptr));
+        } else {
+            isExpired = true;
+        }
+    } else {
+        isExpired = true;
+    }
+
+    if (!isExpired) {
         if (!PasswordUtil::verify(request.currentPassword, user.passwordHash)) {
             throw UnauthorizedException("Current password is incorrect.");
         }
@@ -75,5 +111,5 @@ void AuthService::changePassword(int userId, const ChangePasswordRequest& reques
 
     const std::string newHash = PasswordUtil::hash(request.newPassword);
     userRepository->updatePasswordHash(userId, newHash);
-    userRepository->setForcePwdChange(userId, false);
+    userRepository->refreshPasswordExpiry(userId);
 }

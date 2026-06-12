@@ -30,18 +30,18 @@ static void skillMatchScreen(const ApiClient& api) {
     if (results.empty()) {
         ConsoleUtil::printInfo("No matching employees found.");
     } else {
-        int i = 1;
-        for (const auto& r : results) {
+        int itemIndex = 1;
+        for (const auto& result : results) {
             std::string skills;
-            for (const auto& s : r.value("skills", nlohmann::json::array())) {
+            for (const auto& skill : result.value("skills", nlohmann::json::array())) {
                 if (!skills.empty()) skills += ", ";
-                skills += s.value("skillName", "");
+                skills += skill.value("skillName", "");
             }
-            std::cout << i++ << ".  " << r.value("fullName", "")
-                      << "  (Score: " << r.value("relevanceScore", 0) << "/10"
-                      << "  |  " << r.value("status", "") << ")\n";
+            std::cout << itemIndex++ << ".  " << result.value("fullName", "")
+                      << "  (Score: " << result.value("relevanceScore", 0) << "/10"
+                      << "  |  " << result.value("status", "") << ")\n";
             std::cout << "    Skills : " << ConsoleUtil::trunc(skills, 55) << "\n";
-            std::cout << "    Reason : " << r.value("reason", "") << "\n\n";
+            std::cout << "    Reason : " << result.value("reason", "") << "\n\n";
         }
     }
     ConsoleUtil::printInfo("Note: AI-generated. Verify before allocating.");
@@ -63,11 +63,11 @@ static void riskSummaryScreen(const ApiClient& api) {
     }
 
     std::cout << "Select project:\n";
-    int i = 1;
-    for (const auto& p : projects) {
-        const std::string health = p.value("healthStatus", "ON_TRACK");
-        std::cout << "  " << i++ << ".  "
-                  << ConsoleUtil::trunc(p.value("name",""), 30)
+    int projectIndex = 1;
+    for (const auto& project : projects) {
+        const std::string health = project.value("healthStatus", "ON_TRACK");
+        std::cout << "  " << projectIndex++ << ".  "
+                  << ConsoleUtil::trunc(project.value("name",""), 30)
                   << "  " << ConsoleUtil::healthIcon(health) << " " << health << "\n";
     }
 
@@ -100,6 +100,83 @@ static void riskSummaryScreen(const ApiClient& api) {
     ConsoleUtil::pause();
 }
 
+static void teamBuilderScreen(const ApiClient& api) {
+    ConsoleUtil::clearScreen();
+    ConsoleUtil::printHeader("TEAM BUILDER");
+
+    std::cout << "Describe the team you need in plain English.\n"
+              << "Example: Senior Java developer, DevOps engineer with Kubernetes, QA tester\n\n"
+              << "> ";
+    std::string description;
+    std::getline(std::cin, description);
+    if (description.empty()) return;
+
+    std::cout << "\nBuilding team... (parsing roles and matching skills)\n";
+
+    const auto resp = api.post(
+        "/api/manager/ai/team-builder",
+        {{"description", description}},
+        AppSession::get().token
+    );
+
+    ConsoleUtil::clearScreen();
+    ConsoleUtil::printHeader("TEAM SUGGESTION");
+
+    if (!resp.success) {
+        ConsoleUtil::printError(resp.errorMessage);
+        ConsoleUtil::pause();
+        return;
+    }
+
+    const auto& roles = resp.body.value("data", nlohmann::json::array());
+    if (roles.empty()) {
+        ConsoleUtil::printInfo("No roles could be parsed from your description.");
+        ConsoleUtil::pause();
+        return;
+    }
+
+    int filled = 0;
+    int total  = static_cast<int>(roles.size());
+
+    for (int i = 0; i < total; ++i) {
+        const auto& role = roles[i];
+        const std::string roleName = role.value("roleName", "Role " + std::to_string(i + 1));
+
+        if (role.value("filled", false)) {
+            ++filled;
+            const std::string status       = role.value("status", "");
+            const std::string allocUntil   = role.value("allocatedUntil", "");
+            const bool onBench             = (status == "BENCH");
+
+            // Skill list
+            std::string skills;
+            for (const auto& s : role.value("matchedSkills", nlohmann::json::array())) {
+                if (!skills.empty()) skills += ", ";
+                skills += s.get<std::string>();
+            }
+
+            std::cout << "  \u2713  [FILLED] " << roleName << "\n";
+            std::cout << "  Employee   : " << role.value("fullName", "")
+                      << "  (ID: " << role.value("userId", 0) << ")\n";
+            std::cout << "  Dept       : " << role.value("department", "")
+                      << "  |  " << role.value("designation", "") << "\n";
+            std::cout << "  Status     : " << (onBench ? "BENCH (available now)" : "ALLOCATED until " + ConsoleUtil::fmtDate(allocUntil)) << "\n";
+            std::cout << "  Skills     : " << ConsoleUtil::trunc(skills, 55) << "\n";
+        } else {
+            std::cout << "  \u2717  [GAP]    " << roleName << "\n";
+            std::cout << "  Reason     : " << role.value("gapReason", "Unknown") << "\n";
+        }
+        std::cout << "\n";
+    }
+
+    std::cout << "────────────────────────────────────────────────────\n";
+    std::cout << filled << "/" << total << " roles filled";
+    if (filled < total) std::cout << "   |   " << (total - filled) << " gap(s) requiring action";
+    std::cout << "\n\n";
+    ConsoleUtil::printInfo("Note: AI-generated. Verify skills and availability before allocating.");
+    ConsoleUtil::pause();
+}
+
 void showManagerAI(const ApiClient& api) {
     while (true) {
         ConsoleUtil::clearScreen();
@@ -107,14 +184,16 @@ void showManagerAI(const ApiClient& api) {
 
         std::cout << "1. Skill Match    — Find best employees for a requirement\n"
                   << "2. Risk Summary   — Get a health analysis for a project\n"
-                  << "3. Back\n"
+                  << "3. Team Builder   — Suggest a full team with skill matching\n"
+                  << "4. Back\n"
                   << "\nEnter option: ";
 
         std::string opt;
         std::getline(std::cin, opt);
 
-        if (opt == "1") skillMatchScreen(api);
+        if      (opt == "1") skillMatchScreen(api);
         else if (opt == "2") riskSummaryScreen(api);
-        else if (opt == "3" || opt == "b" || opt == "B") return;
+        else if (opt == "3") teamBuilderScreen(api);
+        else if (opt == "4" || opt == "b" || opt == "B") return;
     }
 }

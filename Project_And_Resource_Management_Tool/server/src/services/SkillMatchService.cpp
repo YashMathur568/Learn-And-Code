@@ -11,29 +11,35 @@
 static constexpr const char* SCHEMA_CONTEXT = R"(
 Database schema for a Project Resource Manager:
 
-TABLE employees (employee_id INT PK, user_id INT, manager_id INT NULL, full_name VARCHAR, email VARCHAR, department VARCHAR, designation VARCHAR, status ENUM('BENCH','ALLOCATED'), is_active TINYINT)
-TABLE employee_skills (skill_id INT PK, employee_id INT FK->employees, skill_name VARCHAR, category ENUM('Backend','Frontend','DevOps','QA','Other'), proficiency ENUM('Beginner','Intermediate','Advanced'))
-TABLE allocations (allocation_id INT PK, employee_id INT FK->employees, project_id INT FK->projects, utilisation INT, from_date DATE, to_date DATE, is_active TINYINT)
-TABLE projects (project_id INT PK, name VARCHAR, description TEXT, start_date DATE, end_date DATE, status ENUM('PLANNED','ACTIVE','ON_HOLD'), manager_id INT FK->employees, health ENUM('ON_TRACK','ATTENTION','AT_RISK'))
+TABLE users (user_id INT PK, full_name VARCHAR, email VARCHAR, username VARCHAR, role_id INT FK->roles, is_active TINYINT)
+TABLE roles (role_id INT PK, role_name VARCHAR)  -- role_name values: 'ADMIN', 'MANAGER', 'RESOURCE'
+TABLE resource_profile (user_id INT PK FK->users, manager_id INT NULL FK->users, department VARCHAR, designation VARCHAR)
+TABLE resource_status (user_id INT PK FK->users, status ENUM('BENCH','ALLOCATED'))
+TABLE user_skills (skill_id INT PK, user_id INT FK->users, skill_name VARCHAR, category ENUM('Backend','Frontend','DevOps','QA','Other'), proficiency ENUM('Beginner','Intermediate','Advanced'))
+TABLE allocations (allocation_id INT PK, user_id INT FK->users, project_id INT FK->projects, utilisation INT, from_date DATE, to_date DATE, is_active TINYINT)
+TABLE projects (project_id INT PK, name VARCHAR, description TEXT, start_date DATE, end_date DATE, status ENUM('PLANNED','ACTIVE','ON_HOLD'), manager_id INT FK->users, health ENUM('ON_TRACK','ATTENTION','AT_RISK'))
 
 Rules:
-- Only active employees: is_active = 1
+- Only active resources: u.is_active = 1 AND ro.role_name = 'RESOURCE'
 - Only output SELECT SQL
-- Always join employee_skills ON employees.employee_id = employee_skills.employee_id
-- Include: employee_id, full_name, department, designation, status, skill_name, category, proficiency
+- Always join: users u, roles ro ON ro.role_id = u.role_id, resource_profile rp ON rp.user_id = u.user_id, resource_status rs ON rs.user_id = u.user_id, user_skills s ON s.user_id = u.user_id
+- Include: u.user_id, u.full_name, rp.department, rp.designation, rs.status, s.skill_name, s.category, s.proficiency
 - LIMIT 20
 )";
 
 static constexpr const char* SQL_FEW_SHOT = R"(
 Examples:
 Q: find React developers
-SQL: SELECT e.employee_id, e.full_name, e.department, e.designation, e.status, s.skill_name, s.category, s.proficiency FROM employees e JOIN employee_skills s ON e.employee_id = s.employee_id WHERE e.is_active = 1 AND LOWER(s.skill_name) LIKE '%react%' LIMIT 20;
+SQL: SELECT u.user_id, u.full_name, rp.department, rp.designation, rs.status, s.skill_name, s.category, s.proficiency FROM users u JOIN roles ro ON ro.role_id = u.role_id JOIN resource_profile rp ON rp.user_id = u.user_id JOIN resource_status rs ON rs.user_id = u.user_id JOIN user_skills s ON s.user_id = u.user_id WHERE u.is_active = 1 AND ro.role_name = 'RESOURCE' AND LOWER(s.skill_name) LIKE '%react%' LIMIT 20;
 
 Q: who knows Python with Advanced proficiency
-SQL: SELECT e.employee_id, e.full_name, e.department, e.designation, e.status, s.skill_name, s.category, s.proficiency FROM employees e JOIN employee_skills s ON e.employee_id = s.employee_id WHERE e.is_active = 1 AND LOWER(s.skill_name) = 'python' AND s.proficiency = 'Advanced' LIMIT 20;
+SQL: SELECT u.user_id, u.full_name, rp.department, rp.designation, rs.status, s.skill_name, s.category, s.proficiency FROM users u JOIN roles ro ON ro.role_id = u.role_id JOIN resource_profile rp ON rp.user_id = u.user_id JOIN resource_status rs ON rs.user_id = u.user_id JOIN user_skills s ON s.user_id = u.user_id WHERE u.is_active = 1 AND ro.role_name = 'RESOURCE' AND LOWER(s.skill_name) = 'python' AND s.proficiency = 'Advanced' LIMIT 20;
 
 Q: bench employees with DevOps skills
-SQL: SELECT e.employee_id, e.full_name, e.department, e.designation, e.status, s.skill_name, s.category, s.proficiency FROM employees e JOIN employee_skills s ON e.employee_id = s.employee_id WHERE e.is_active = 1 AND e.status = 'BENCH' AND s.category = 'DevOps' LIMIT 20;
+SQL: SELECT u.user_id, u.full_name, rp.department, rp.designation, rs.status, s.skill_name, s.category, s.proficiency FROM users u JOIN roles ro ON ro.role_id = u.role_id JOIN resource_profile rp ON rp.user_id = u.user_id JOIN resource_status rs ON rs.user_id = u.user_id JOIN user_skills s ON s.user_id = u.user_id WHERE u.is_active = 1 AND ro.role_name = 'RESOURCE' AND rs.status = 'BENCH' AND s.category = 'DevOps' LIMIT 20;
+
+Q: someone with C++ experience
+SQL: SELECT u.user_id, u.full_name, rp.department, rp.designation, rs.status, s.skill_name, s.category, s.proficiency FROM users u JOIN roles ro ON ro.role_id = u.role_id JOIN resource_profile rp ON rp.user_id = u.user_id JOIN resource_status rs ON rs.user_id = u.user_id JOIN user_skills s ON s.user_id = u.user_id WHERE u.is_active = 1 AND ro.role_name = 'RESOURCE' AND LOWER(s.skill_name) LIKE '%c++%' LIMIT 20;
 )";
 
 SkillMatchService::SkillMatchService(std::shared_ptr<ILLMAdapter> llmAdapter)
@@ -97,26 +103,30 @@ std::string SkillMatchService::extractSql(const std::string& llmResponse) {
 }
 
 std::vector<nlohmann::json> SkillMatchService::executeQuery(const std::string& sql) {
-    auto connection = DatabasePool::getInstance().acquire();
-    std::unique_ptr<sql::Statement> stmt(connection->createStatement());
-    std::unique_ptr<sql::ResultSet> rs(stmt->executeQuery(sql));
-    sql::ResultSetMetaData* meta = rs->getMetaData();
-    const unsigned int colCount = meta->getColumnCount();
+    try {
+        auto connection = DatabasePool::getInstance().acquire();
+        std::unique_ptr<sql::Statement> stmt(connection->createStatement());
+        std::unique_ptr<sql::ResultSet> rs(stmt->executeQuery(sql));
+        sql::ResultSetMetaData* meta = rs->getMetaData();
+        const unsigned int colCount = meta->getColumnCount();
 
-    std::vector<nlohmann::json> rows;
-    while (rs->next()) {
-        nlohmann::json row;
-        for (unsigned int col = 1; col <= colCount; ++col) {
-            const std::string colName(meta->getColumnName(col).c_str());
-            if (rs->isNull(col)) {
-                row[colName] = nullptr;
-            } else {
-                row[colName] = rs->getString(col);
+        std::vector<nlohmann::json> rows;
+        while (rs->next()) {
+            nlohmann::json row;
+            for (unsigned int col = 1; col <= colCount; ++col) {
+                const std::string colName(meta->getColumnName(col).c_str());
+                if (rs->isNull(col)) {
+                    row[colName] = nullptr;
+                } else {
+                    row[colName] = rs->getString(col);
+                }
             }
+            rows.push_back(row);
         }
-        rows.push_back(row);
+        return rows;
+    } catch (const sql::SQLException& ex) {
+        throw AppException(std::string("SQL execution error: ") + ex.what());
     }
-    return rows;
 }
 
 std::string SkillMatchService::buildRankingPrompt(

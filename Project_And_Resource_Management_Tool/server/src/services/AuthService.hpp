@@ -2,21 +2,16 @@
 
 #include "IAuthService.hpp"
 #include "../repositories/IUserRepository.hpp"
-#include "../repositories/IEmployeeRepository.hpp"
 
 #include <memory>
 
 class AuthService : public IAuthService {
 public:
-    AuthService(
-        std::shared_ptr<IUserRepository>     userRepository,
-        std::shared_ptr<IEmployeeRepository> employeeRepository
-    );
+    explicit AuthService(std::shared_ptr<IUserRepository> userRepository);
 
     LoginResponse    login(const LoginRequest& request)                               override;
     void             changePassword(int userId, const ChangePasswordRequest& request) override;
 
 private:
-    std::shared_ptr<IUserRepository>     userRepository;
-    std::shared_ptr<IEmployeeRepository> employeeRepository;
+    std::shared_ptr<IUserRepository> userRepository;
 };

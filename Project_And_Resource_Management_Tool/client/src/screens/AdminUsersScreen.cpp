@@ -15,19 +15,30 @@ static void createUser(const ApiClient& api) {
     const std::string username = ConsoleUtil::promptInput("Username          : ");
     const std::string tempPass = ConsoleUtil::promptPassword("Temporary Password: ");
 
-    std::cout << "Role: (1) Admin  (2) Manager  (3) Employee\n";
+    std::cout << "Role: (1) Admin  (2) Manager  (3) Resource\n";
     const std::string roleOpt  = ConsoleUtil::promptInput("Choice            : ");
-    const std::vector<std::string> roles = {"ADMIN","MANAGER","EMPLOYEE"};
+    const std::vector<std::string> roles = {"ADMIN","MANAGER","RESOURCE"};
     if (roleOpt < "1" || roleOpt > "3") { ConsoleUtil::printError("Invalid role."); ConsoleUtil::pause(); return; }
     const std::string role = roles[std::stoi(roleOpt) - 1];
 
-    const auto resp = api.post("/api/admin/users", {
-        {"fullName",  fullName},
-        {"email",     email},
-        {"username",  username},
-        {"password",  tempPass},
-        {"role",      role}
-    }, AppSession::get().token);
+    nlohmann::json payload = {
+        {"fullName",     fullName},
+        {"email",        email},
+        {"username",     username},
+        {"tempPassword", tempPass},
+        {"role",         role}
+    };
+
+    if (role == "MANAGER" || role == "RESOURCE") {
+        const std::string dept  = ConsoleUtil::selectFromList("Department",  ConsoleUtil::DEPARTMENTS,  "");
+        const std::string desig = ConsoleUtil::selectFromList("Designation", ConsoleUtil::DESIGNATIONS, "");
+        payload["department"]   = dept;
+        payload["designation"]  = desig;
+    }
+
+    // Manager is assigned separately via Admin > Employee > Assign Manager
+
+    const auto resp = api.post("/api/admin/users", payload, AppSession::get().token);
 
     if (!resp.success) ConsoleUtil::printError(resp.errorMessage);
     else               ConsoleUtil::printSuccess("Account created. User must change password on first login.");
@@ -53,13 +64,13 @@ static void viewAllUsers(const ApiClient& api) {
         ConsoleUtil::printSeparator();
 
         int active = 0, inactive = 0;
-        for (const auto& u : data) {
-            const bool isActive = u.value("isActive", false);
+        for (const auto& user : data) {
+            const bool isActive = user.value("isActive", false);
             if (isActive) ++active; else ++inactive;
-            std::cout << ConsoleUtil::col(std::to_string(u.value("userId", 0)), 5)
-                      << ConsoleUtil::col(u.value("username", ""), 20)
-                      << ConsoleUtil::col(ConsoleUtil::trunc(u.value("fullName", ""), 19), 20)
-                      << ConsoleUtil::col(u.value("role", ""), 12)
+            std::cout << ConsoleUtil::col(std::to_string(user.value("userId", 0)), 5)
+                      << ConsoleUtil::col(user.value("username", ""), 20)
+                      << ConsoleUtil::col(ConsoleUtil::trunc(user.value("fullName", ""), 19), 20)
+                      << ConsoleUtil::col(user.value("role", ""), 12)
                       << (isActive ? "Active" : "Inactive") << "\n";
         }
         ConsoleUtil::printSeparator();
@@ -100,7 +111,7 @@ static void resetPassword(const ApiClient& api) {
 
     const auto resp = api.put(
         "/api/admin/users/" + idStr + "/reset-password",
-        {{"newPassword", newPass}},
+        {{"tempPassword", newPass}},
         AppSession::get().token
     );
     if (!resp.success) ConsoleUtil::printError(resp.errorMessage);

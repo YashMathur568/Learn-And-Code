@@ -16,13 +16,13 @@ public:
         std::shared_ptr<IProjectRepository>    projectRepository
     );
 
-    Allocation              createAllocation(int managerEmployeeId,
+    Allocation              createAllocation(int managerUserId,
                                              const CreateAllocationRequest& request) override;
-    Allocation              endAllocation(int allocationId, int managerEmployeeId)   override;
-    std::vector<Allocation> getByEmployeeId(int employeeId)                          override;
-    std::vector<Allocation> getActiveByEmployeeId(int employeeId)                    override;
+    Allocation              endAllocation(int allocationId, int managerUserId)       override;
+    std::vector<Allocation> getByUserId(int userId)                                  override;
+    std::vector<Allocation> getActiveByUserId(int userId)                            override;
     std::vector<Allocation> getActiveByProjectId(int projectId)                      override;
-    int                     getTotalUtilisation(int employeeId)                      override;
+    int                     getTotalUtilisation(int userId)                          override;
 
 private:
     std::shared_ptr<IAllocationRepository> allocationRepository;

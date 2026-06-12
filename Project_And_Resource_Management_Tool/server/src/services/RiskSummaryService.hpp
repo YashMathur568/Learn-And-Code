@@ -22,7 +22,7 @@ public:
         std::shared_ptr<IEmployeeRepository>   employeeRepository
     );
 
-    std::string generateSummary(int projectId, int managerEmployeeId) override;
+    std::string generateSummary(int projectId, int managerUserId) override;
 
 private:
     std::string buildFactsPrompt(int projectId) const;

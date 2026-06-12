@@ -10,6 +10,6 @@ struct User {
     std::string passwordHash;
     std::string role;
     bool        isActive{true};
-    bool        forcePwdChange{true};
+    std::string passwordExpiresAt;
     std::string createdAt;
 };

@@ -21,27 +21,26 @@ static void viewAllEmployees(const ApiClient& api) {
         const auto& data = resp.body.value("data", nlohmann::json::array());
 
         std::cout << ConsoleUtil::col("ID",   6)
-              << ConsoleUtil::col("Name", 20)
+                  << ConsoleUtil::col("Role",     10)
+                  << ConsoleUtil::col("Name",     22)
                   << ConsoleUtil::col("Department", 14)
-              << ConsoleUtil::col("Designation", 28)
                   << "Status\n";
         ConsoleUtil::printSeparator();
 
-        int allocated = 0, bench = 0;
+        int activeCount = 0, inactiveCount = 0;
         for (const auto& emp : data) {
-            const std::string status = emp.value("status", "");
-            if (status == "ALLOCATED") ++allocated; else ++bench;
+            if (emp.value("isActive", true)) ++activeCount; else ++inactiveCount;
 
-            std::cout << ConsoleUtil::col(std::to_string(emp.value("employeeId", 0)), 6)
-                      << ConsoleUtil::col(emp.value("fullName", ""), 20)
+            std::cout << ConsoleUtil::col(std::to_string(emp.value("userId", 0)), 6)
+                      << ConsoleUtil::col(emp.value("role", ""), 10)
+                      << ConsoleUtil::col(emp.value("fullName", ""), 22)
                       << ConsoleUtil::col(emp.value("department", ""), 14)
-                      << ConsoleUtil::col(emp.value("designation", ""), 28)
-                      << status << "\n";
+                      << emp.value("status", "") << "\n";
         }
         ConsoleUtil::printSeparator();
         std::cout << "Total: " << data.size()
-                  << "   |   Allocated: " << allocated
-                  << "   |   Bench: " << bench << "\n";
+                  << "   |   Active: " << activeCount
+                  << "   |   Inactive: " << inactiveCount << "\n";
 
         std::cout << "\n[B] Back\n\nOption: ";
         std::string opt;
@@ -55,47 +54,75 @@ static void updateEmployee(const ApiClient& api) {
     ConsoleUtil::clearScreen();
     ConsoleUtil::printHeader("UPDATE EMPLOYEE");
 
-    const std::string idStr = ConsoleUtil::promptInput("Employee ID: ");
+    // Fetch and display the full list so the admin can identify IDs
+    const auto respAll = api.get("/api/admin/employees", AppSession::get().token);
+    if (!respAll.success) { ConsoleUtil::printError(respAll.errorMessage); ConsoleUtil::pause(); return; }
+
+    const auto& allEmps = respAll.body.value("data", nlohmann::json::array());
+    std::cout << ConsoleUtil::col("ID",   6)
+              << ConsoleUtil::col("Role", 10)
+              << ConsoleUtil::col("Name", 24)
+              << ConsoleUtil::col("Department", 22)
+              << "Designation\n";
+    ConsoleUtil::printSeparator();
+    for (const auto& emp : allEmps) {
+        std::cout << ConsoleUtil::col(std::to_string(emp.value("userId", 0)), 6)
+                  << ConsoleUtil::col(emp.value("role", ""), 10)
+                  << ConsoleUtil::col(emp.value("fullName", ""), 24)
+                  << ConsoleUtil::col(emp.value("department", ""), 22)
+                  << emp.value("designation", "") << "\n";
+    }
+    ConsoleUtil::printSeparator();
+    std::cout << "\n";
+
+    const std::string idStr = ConsoleUtil::promptInput("Employee ID (B to go back): ");
     if (idStr.empty() || idStr == "b" || idStr == "B") return;
 
-    const auto respGet = api.get("/api/admin/employees", AppSession::get().token);
-    if (!respGet.success) { ConsoleUtil::printError(respGet.errorMessage); ConsoleUtil::pause(); return; }
+    try { std::stoi(idStr); } catch (...) {
+        ConsoleUtil::printError("Please enter a numeric ID.");
+        ConsoleUtil::pause(); return;
+    }
 
     nlohmann::json found;
-    for (const auto& e : respGet.body.value("data", nlohmann::json::array())) {
-        if (std::to_string(e.value("employeeId", 0)) == idStr) { found = e; break; }
+    for (const auto& employee : allEmps) {
+        if (std::to_string(employee.value("userId", 0)) == idStr) { found = employee; break; }
     }
     if (found.is_null()) { ConsoleUtil::printError("Employee not found."); ConsoleUtil::pause(); return; }
 
-    const std::string name  = found.value("fullName", "");
-    const std::string email = found.value("email", "");
-    std::cout << "\n── " << name << " ──\n";
-    std::cout << "Leave any field blank to keep current value.\n\n";
+    const std::string currentName  = found.value("fullName", "");
+    const std::string currentEmail = found.value("email", "");
+    const std::string role         = found.value("role", "");
 
-    const std::string fullName = ConsoleUtil::promptInput("Full Name      [" + name + "]: ");
-    const std::string emailIn  = ConsoleUtil::promptInput("Email          [" + email + "]: ");
-    const std::string dept    = ConsoleUtil::promptInput("Department     [" + found.value("department", "") + "]: ");
-    const std::string desig   = ConsoleUtil::promptInput("Designation    [" + found.value("designation", "") + "]: ");
+    ConsoleUtil::clearScreen();
+    ConsoleUtil::printHeader("UPDATE EMPLOYEE");
+    std::cout << "\n── " << currentName << " [" << role << "] ──\n\n";
 
-    const std::string newFullName    = fullName.empty() ? name : fullName;
-    const std::string newEmail       = emailIn.empty() ? email : emailIn;
-    const std::string newDepartment  = dept.empty() ? found.value("department", "") : dept;
-    const std::string newDesignation = desig.empty() ? found.value("designation", "") : desig;
+    const std::string newFullName = ConsoleUtil::promptInput("Full Name  [" + currentName + "]: ");
+    const std::string newEmail    = ConsoleUtil::promptInput("Email      [" + currentEmail + "]: ");
 
-    if (newFullName == name
-        && newEmail == email
-        && newDepartment == found.value("department", "")
-        && newDesignation == found.value("designation", "")) {
+    const std::string resolvedName  = newFullName.empty() ? currentName : newFullName;
+    const std::string resolvedEmail = newEmail.empty() ? currentEmail : newEmail;
+
+    std::string resolvedDept  = found.value("department", "");
+    std::string resolvedDesig = found.value("designation", "");
+
+    resolvedDept  = ConsoleUtil::selectFromList("Department",  ConsoleUtil::DEPARTMENTS, resolvedDept);
+    resolvedDesig = ConsoleUtil::selectFromList("Designation", ConsoleUtil::DESIGNATIONS, resolvedDesig);
+
+    if (resolvedName  == currentName
+        && resolvedEmail == currentEmail
+        && resolvedDept  == found.value("department", "")
+        && resolvedDesig == found.value("designation", "")) {
         ConsoleUtil::printInfo("No changes made.");
         ConsoleUtil::pause();
         return;
     }
 
-    nlohmann::json payload = {
-        {"fullName", newFullName},
-        {"email", newEmail},
-        {"department", newDepartment},
-        {"designation", newDesignation}
+    const nlohmann::json payload = {
+        {"fullName",    resolvedName},
+        {"email",       resolvedEmail},
+        {"department",  resolvedDept},
+        {"designation", resolvedDesig}
     };
 
     const auto resp = api.put("/api/admin/employees/" + idStr, payload, AppSession::get().token);
@@ -109,25 +136,46 @@ static void deactivateEmployee(const ApiClient& api) {
     ConsoleUtil::clearScreen();
     ConsoleUtil::printHeader("DEACTIVATE EMPLOYEE");
 
-    const std::string idStr = ConsoleUtil::promptInput("Employee ID: ");
-    if (idStr.empty() || idStr == "b" || idStr == "B") return;
+    const auto respAll = api.get("/api/admin/employees", AppSession::get().token);
+    if (!respAll.success) { ConsoleUtil::printError(respAll.errorMessage); ConsoleUtil::pause(); return; }
 
-    const auto respGet = api.get("/api/admin/employees", AppSession::get().token);
-    if (!respGet.success) { ConsoleUtil::printError(respGet.errorMessage); ConsoleUtil::pause(); return; }
+    const auto& allEmps = respAll.body.value("data", nlohmann::json::array());
+    std::cout << ConsoleUtil::col("ID",   6)
+              << ConsoleUtil::col("Role", 10)
+              << ConsoleUtil::col("Name", 24)
+              << ConsoleUtil::col("Department", 18)
+              << "Active\n";
+    ConsoleUtil::printSeparator();
+    for (const auto& emp : allEmps) {
+        std::cout << ConsoleUtil::col(std::to_string(emp.value("userId", 0)), 6)
+                  << ConsoleUtil::col(emp.value("role", ""), 10)
+                  << ConsoleUtil::col(emp.value("fullName", ""), 24)
+                  << ConsoleUtil::col(emp.value("department", ""), 18)
+                  << (emp.value("isActive", true) ? "Yes" : "No") << "\n";
+    }
+    ConsoleUtil::printSeparator();
+    std::cout << "\n";
+
+    const std::string idStr = ConsoleUtil::promptInput("Employee ID (B to go back): ");
+    if (idStr.empty() || idStr == "b" || idStr == "B") return;
+    try { std::stoi(idStr); } catch (...) {
+        ConsoleUtil::printError("Please enter a numeric ID.");
+        ConsoleUtil::pause(); return;
+    }
 
     nlohmann::json found;
-    for (const auto& e : respGet.body.value("data", nlohmann::json::array())) {
-        if (std::to_string(e.value("employeeId", 0)) == idStr) { found = e; break; }
+    for (const auto& employee : allEmps) {
+        if (std::to_string(employee.value("userId", 0)) == idStr) { found = employee; break; }
     }
     if (found.is_null()) { ConsoleUtil::printError("Employee not found."); ConsoleUtil::pause(); return; }
+    if (!found.value("isActive", true)) { ConsoleUtil::printError("Employee is already inactive."); ConsoleUtil::pause(); return; }
 
-    const std::string name   = found.value("fullName", "");
-    const std::string status = found.value("status", "");
-    const std::string dept   = found.value("department", "");
-
+    ConsoleUtil::clearScreen();
+    ConsoleUtil::printHeader("DEACTIVATE EMPLOYEE");
+    const std::string name = found.value("fullName", "");
     std::cout << "\n── " << name << " ──\n";
-    std::cout << "Department : " << dept << "\n";
-    std::cout << "Status     : " << status << "\n\n";
+    std::cout << "Department : " << found.value("department", "") << "\n";
+    std::cout << "Status     : " << found.value("status", "") << "\n\n";
     ConsoleUtil::printWarning("This will end all active allocations and block login.");
 
     if (!ConsoleUtil::confirm("Deactivate " + name + "?")) {
@@ -139,10 +187,64 @@ static void deactivateEmployee(const ApiClient& api) {
     else {
         ConsoleUtil::printSuccess("Employee deactivated.");
         const auto& ended = resp.body.value("endedAllocations", nlohmann::json::array());
-        if (!ended.empty()) {
+        if (!ended.empty())
             std::cout << "  Ended allocations: " << ended.size() << "\n";
-        }
     }
+    ConsoleUtil::pause();
+}
+
+// ── Reactivate employee ───────────────────────────────────────────────────────
+static void reactivateEmployee(const ApiClient& api) {
+    ConsoleUtil::clearScreen();
+    ConsoleUtil::printHeader("REACTIVATE EMPLOYEE");
+
+    const auto respAll = api.get("/api/admin/employees", AppSession::get().token);
+    if (!respAll.success) { ConsoleUtil::printError(respAll.errorMessage); ConsoleUtil::pause(); return; }
+
+    const auto& allEmps = respAll.body.value("data", nlohmann::json::array());
+    std::cout << "Inactive employees:\n\n";
+    std::cout << ConsoleUtil::col("ID",   6)
+              << ConsoleUtil::col("Role", 10)
+              << ConsoleUtil::col("Name", 24)
+              << "Department\n";
+    ConsoleUtil::printSeparator();
+    int inactiveCount = 0;
+    for (const auto& emp : allEmps) {
+        if (emp.value("isActive", true)) continue;
+        ++inactiveCount;
+        std::cout << ConsoleUtil::col(std::to_string(emp.value("userId", 0)), 6)
+                  << ConsoleUtil::col(emp.value("role", ""), 10)
+                  << ConsoleUtil::col(emp.value("fullName", ""), 24)
+                  << emp.value("department", "") << "\n";
+    }
+    ConsoleUtil::printSeparator();
+    if (inactiveCount == 0) {
+        ConsoleUtil::printInfo("No inactive employees.");
+        ConsoleUtil::pause(); return;
+    }
+    std::cout << "\n";
+
+    const std::string idStr = ConsoleUtil::promptInput("Employee ID (B to go back): ");
+    if (idStr.empty() || idStr == "b" || idStr == "B") return;
+    try { std::stoi(idStr); } catch (...) {
+        ConsoleUtil::printError("Please enter a numeric ID.");
+        ConsoleUtil::pause(); return;
+    }
+
+    nlohmann::json found;
+    for (const auto& emp : allEmps) {
+        if (std::to_string(emp.value("userId", 0)) == idStr) { found = emp; break; }
+    }
+    if (found.is_null()) { ConsoleUtil::printError("Employee not found."); ConsoleUtil::pause(); return; }
+    if (found.value("isActive", false)) { ConsoleUtil::printError("Employee is already active."); ConsoleUtil::pause(); return; }
+
+    if (!ConsoleUtil::confirm("Reactivate " + found.value("fullName", "") + "?")) {
+        ConsoleUtil::printInfo("Cancelled."); ConsoleUtil::pause(); return;
+    }
+
+    const auto resp = api.put("/api/admin/users/" + idStr + "/reactivate", {}, AppSession::get().token);
+    if (!resp.success) { ConsoleUtil::printError(resp.errorMessage); }
+    else               { ConsoleUtil::printSuccess("Employee reactivated. They can now log in."); }
     ConsoleUtil::pause();
 }
 
@@ -151,14 +253,41 @@ static void assignManager(const ApiClient& api) {
     ConsoleUtil::clearScreen();
     ConsoleUtil::printHeader("ASSIGN MANAGER");
 
-    const std::string empId = ConsoleUtil::promptInput("Employee ID  : ");
+    const auto respAll = api.get("/api/admin/employees", AppSession::get().token);
+    if (!respAll.success) { ConsoleUtil::printError(respAll.errorMessage); ConsoleUtil::pause(); return; }
+    const auto& allEmps = respAll.body.value("data", nlohmann::json::array());
+
+    std::cout << "Managers:\n";
+    std::cout << ConsoleUtil::col("ID",   6) << "Name\n";
+    ConsoleUtil::printSeparator();
+    for (const auto& emp : allEmps) {
+        if (emp.value("role", "") != "MANAGER") continue;
+        std::cout << ConsoleUtil::col(std::to_string(emp.value("userId", 0)), 6)
+                  << emp.value("fullName", "") << "\n";
+    }
+    ConsoleUtil::printSeparator();
+    std::cout << "\nEmployees:\n";
+    std::cout << ConsoleUtil::col("ID",   6)
+              << ConsoleUtil::col("Name", 24)
+              << "Current Manager\n";
+    ConsoleUtil::printSeparator();
+    for (const auto& emp : allEmps) {
+        if (emp.value("role", "") == "MANAGER") continue;
+        std::cout << ConsoleUtil::col(std::to_string(emp.value("userId", 0)), 6)
+                  << ConsoleUtil::col(emp.value("fullName", ""), 24)
+                  << emp.value("managerName", "(none)") << "\n";
+    }
+    ConsoleUtil::printSeparator();
+    std::cout << "\n";
+
+    const std::string empId = ConsoleUtil::promptInput("Employee ID  (B to go back): ");
     if (empId.empty() || empId == "b" || empId == "B") return;
     const std::string mgrId = ConsoleUtil::promptInput("Manager ID   : ");
     if (mgrId.empty()) { ConsoleUtil::printError("Manager ID required."); ConsoleUtil::pause(); return; }
 
     const auto resp = api.put(
         "/api/admin/employees/" + empId + "/assign-manager",
-        {{"managerEmployeeId", std::stoi(mgrId)}},
+        {{"managerId", std::stoi(mgrId)}},
         AppSession::get().token
     );
     if (!resp.success) { ConsoleUtil::printError(resp.errorMessage); }
@@ -171,8 +300,26 @@ static void manageSkills(const ApiClient& api) {
     ConsoleUtil::clearScreen();
     ConsoleUtil::printHeader("MANAGE EMPLOYEE SKILLS");
 
-    const std::string idStr = ConsoleUtil::promptInput("Employee ID: ");
+    const auto respAll = api.get("/api/admin/employees", AppSession::get().token);
+    if (!respAll.success) { ConsoleUtil::printError(respAll.errorMessage); ConsoleUtil::pause(); return; }
+    const auto& allEmps = respAll.body.value("data", nlohmann::json::array());
+    std::cout << ConsoleUtil::col("ID",   6)
+              << ConsoleUtil::col("Role", 10)
+              << ConsoleUtil::col("Name", 24)
+              << "Department\n";
+    ConsoleUtil::printSeparator();
+    for (const auto& emp : allEmps) {
+        std::cout << ConsoleUtil::col(std::to_string(emp.value("userId", 0)), 6)
+                  << ConsoleUtil::col(emp.value("role", ""), 10)
+                  << ConsoleUtil::col(emp.value("fullName", ""), 24)
+                  << emp.value("department", "") << "\n";
+    }
+    ConsoleUtil::printSeparator();
+    std::cout << "\n";
+
+    const std::string idStr = ConsoleUtil::promptInput("Employee ID (B to go back): ");
     if (idStr.empty() || idStr == "b" || idStr == "B") return;
+    try { std::stoi(idStr); } catch (...) { ConsoleUtil::printError("Please enter a numeric ID."); ConsoleUtil::pause(); return; }
 
     while (true) {
         ConsoleUtil::clearScreen();
@@ -186,21 +333,21 @@ static void manageSkills(const ApiClient& api) {
         if (skills.empty()) {
             std::cout << "  (no skills on record)\n";
         } else {
-            int i = 1;
+            int skillIndex = 1;
             std::cout << ConsoleUtil::col("#", 4)
                       << ConsoleUtil::col("Skill", 24)
                       << ConsoleUtil::col("Category", 14)
                       << "Proficiency\n";
             ConsoleUtil::printSeparator();
-            for (const auto& s : skills) {
-                std::cout << ConsoleUtil::col(std::to_string(i++), 4)
-                          << ConsoleUtil::col(s.value("skillName", ""), 24)
-                          << ConsoleUtil::col(s.value("category", ""), 14)
-                          << s.value("proficiency", "") << "\n";
+            for (const auto& skill : skills) {
+                std::cout << ConsoleUtil::col(std::to_string(skillIndex++), 4)
+                          << ConsoleUtil::col(skill.value("skillName", ""), 24)
+                          << ConsoleUtil::col(skill.value("category", ""), 14)
+                          << skill.value("proficiency", "") << "\n";
             }
         }
 
-        std::cout << "\n1. Add Skill\n2. Update Proficiency\n3. Remove Skill\n4. Back\n\nOption: ";
+        std::cout << "\n1. Add Skill\n2. Update Skill\n3. Remove Skill\n4. Back\n\nOption: ";
         std::string opt;
         std::getline(std::cin, opt);
 
@@ -209,16 +356,14 @@ static void manageSkills(const ApiClient& api) {
         if (opt == "1") {
             ConsoleUtil::clearScreen();
             ConsoleUtil::printHeader("ADD SKILL");
-            const std::string skillName = ConsoleUtil::promptInput("Skill Name         : ");
+            const auto [skillName, category] = ConsoleUtil::selectSkill();
             if (skillName.empty()) continue;
 
-            std::cout << "Category  : (1) Backend  (2) Frontend  (3) DevOps  (4) QA  (5) Other\n";
-            const std::string catOpt = ConsoleUtil::promptInput("Choice             : ");
-            const std::vector<std::string> cats = {"Backend","Frontend","DevOps","QA","Other"};
-            const std::string category = (catOpt >= "1" && catOpt <= "5") ? cats[std::stoi(catOpt) - 1] : "Other";
-
-            std::cout << "Proficiency: (1) Beginner  (2) Intermediate  (3) Advanced\n";
-            const std::string profOpt = ConsoleUtil::promptInput("Choice             : ");
+            std::cout << "\nProficiency:\n";
+            std::cout << "  1.  Beginner\n";
+            std::cout << "  2.  Intermediate\n";
+            std::cout << "  3.  Advanced\n";
+            const std::string profOpt = ConsoleUtil::promptInput("Select #: ");
             const std::vector<std::string> profs = {"Beginner","Intermediate","Advanced"};
             const std::string proficiency = (profOpt >= "1" && profOpt <= "3") ? profs[std::stoi(profOpt) - 1] : "Beginner";
 
@@ -237,21 +382,33 @@ static void manageSkills(const ApiClient& api) {
             try { idx = std::stoi(numStr) - 1; } catch (...) { continue; }
             if (idx < 0 || idx >= static_cast<int>(skills.size())) continue;
 
-            const int skillId = skills[idx].value("skillId", 0);
-            const std::string skillName = skills[idx].value("skillName", "");
-            const std::string category = skills[idx].value("category", "Other");
-            std::cout << "Proficiency: (1) Beginner  (2) Intermediate  (3) Advanced\n";
-            const std::string profOpt = ConsoleUtil::promptInput("Choice             : ");
+            const int skillId          = skills[idx].value("skillId", 0);
+            const std::string currentSkillName = skills[idx].value("skillName", "");
+            const std::string currentCategory  = skills[idx].value("category", "Other");
+
+            ConsoleUtil::clearScreen();
+            ConsoleUtil::printHeader("UPDATE SKILL");
+            const auto [newSkillName, newCategory] = ConsoleUtil::selectSkill(currentSkillName);
+            const std::string resolvedName     = newSkillName.empty() ? currentSkillName : newSkillName;
+            const std::string resolvedCategory = newSkillName.empty() ? currentCategory  : newCategory;
+
+            std::cout << "\nProficiency:\n";
+            std::cout << "  1.  Beginner\n";
+            std::cout << "  2.  Intermediate\n";
+            std::cout << "  3.  Advanced\n";
+            std::cout << "  0.  (keep: " << skills[idx].value("proficiency", "") << ")\n";
+            const std::string profOpt = ConsoleUtil::promptInput("Select #: ");
             const std::vector<std::string> profs = {"Beginner","Intermediate","Advanced"};
-            const std::string proficiency = (profOpt >= "1" && profOpt <= "3") ? profs[std::stoi(profOpt) - 1] : "Beginner";
+            std::string proficiency = skills[idx].value("proficiency", "Beginner");
+            if (profOpt >= "1" && profOpt <= "3") proficiency = profs[std::stoi(profOpt) - 1];
 
             const auto updResp = api.put(
                 "/api/admin/employees/" + idStr + "/skills/" + std::to_string(skillId),
-                {{"skillName", skillName}, {"category", category}, {"proficiency", proficiency}},
+                {{"skillName", resolvedName}, {"category", resolvedCategory}, {"proficiency", proficiency}},
                 AppSession::get().token
             );
             if (!updResp.success) ConsoleUtil::printError(updResp.errorMessage);
-            else                  ConsoleUtil::printSuccess("Proficiency updated.");
+            else                  ConsoleUtil::printSuccess("Skill updated.");
             ConsoleUtil::pause();
 
         } else if (opt == "3" && !skills.empty()) {
@@ -284,9 +441,10 @@ void showAdminEmployeeMenu(const ApiClient& api) {
         std::cout << "1. View All Employees\n"
                   << "2. Update Employee\n"
                   << "3. Deactivate Employee\n"
-                  << "4. Manage Employee Skills\n"
-                  << "5. Assign Manager\n"
-                  << "6. Back\n"
+                  << "4. Reactivate Employee\n"
+                  << "5. Manage Employee Skills\n"
+                  << "6. Assign Manager\n"
+                  << "7. Back\n"
                   << "\nEnter option: ";
 
         std::string opt;
@@ -295,8 +453,9 @@ void showAdminEmployeeMenu(const ApiClient& api) {
         if (opt == "1") viewAllEmployees(api);
         else if (opt == "2") updateEmployee(api);
         else if (opt == "3") deactivateEmployee(api);
-        else if (opt == "4") manageSkills(api);
-        else if (opt == "5") assignManager(api);
-        else if (opt == "6" || opt == "b" || opt == "B") return;
+        else if (opt == "4") reactivateEmployee(api);
+        else if (opt == "5") manageSkills(api);
+        else if (opt == "6") assignManager(api);
+        else if (opt == "7" || opt == "b" || opt == "B") return;
     }
 }

@@ -17,11 +17,11 @@ public:
         std::shared_ptr<IEmployeeRepository>   employeeRepository
     );
 
-    TimesheetWithEntries              submitTimesheet(int employeeId,
+    TimesheetWithEntries              submitTimesheet(int userId,
                                                       const SubmitTimesheetRequest& request) override;
-    std::vector<TimesheetWithEntries> getByEmployeeId(int employeeId)                        override;
-    std::vector<TimesheetWithEntries> getTeamTimesheets(int managerEmployeeId,
-                                                        const std::string& weekStart)        override;
+    std::vector<TimesheetWithEntries> getByUserId(int userId)                               override;
+    std::vector<TimesheetWithEntries> getTeamTimesheets(int managerUserId,
+                                                         const std::string& weekStart)      override;
 
 private:
     std::shared_ptr<ITimesheetRepository>  timesheetRepository;

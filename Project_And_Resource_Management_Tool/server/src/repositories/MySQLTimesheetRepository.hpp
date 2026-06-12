@@ -6,14 +6,14 @@
 
 class MySQLTimesheetRepository : public ITimesheetRepository {
 public:
-    std::optional<Timesheet>    findById(int timesheetId)                                               override;
-    std::optional<Timesheet>    findByEmployeeAndWeek(int employeeId, const std::string& weekStart)     override;
-    std::vector<Timesheet>      findByEmployeeId(int employeeId)                                        override;
-    std::vector<Timesheet>      findByManagerTeam(int managerEmployeeId, const std::string& weekStart)  override;
-    int                         create(const Timesheet& timesheet)                                      override;
-    void                        createMissed(int employeeId, const std::string& weekStart)              override;
-    std::vector<TimesheetEntry> getEntries(int timesheetId)                                             override;
-    void                        addEntry(const TimesheetEntry& entry)                                   override;
+    std::optional<Timesheet>    findById(int timesheetId)                                          override;
+    std::optional<Timesheet>    findByUserAndWeek(int userId, const std::string& weekStart)        override;
+    std::vector<Timesheet>      findByUserId(int userId)                                           override;
+    std::vector<Timesheet>      findByManagerTeam(int managerUserId, const std::string& weekStart) override;
+    int                         create(const Timesheet& timesheet)                                 override;
+    void                        createMissed(int userId, const std::string& weekStart)             override;
+    std::vector<TimesheetEntry> getEntries(int timesheetId)                                        override;
+    void                        addEntry(const TimesheetEntry& entry)                              override;
 
 private:
     static Timesheet      mapRowToTimesheet(sql::ResultSet* resultSet);

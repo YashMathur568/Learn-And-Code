@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-const std::vector<std::string> UserService::VALID_ROLES = {"ADMIN", "MANAGER", "EMPLOYEE"};
+const std::vector<std::string> UserService::VALID_ROLES = {"ADMIN", "MANAGER", "RESOURCE"};
 
 UserService::UserService(
     std::shared_ptr<IUserRepository>     userRepository,
@@ -21,7 +21,7 @@ void UserService::validateRole(const std::string& role) const {
         [&role](const std::string& validRole) { return validRole == role; }
     );
     if (!roleIsValid) {
-        throw ValidationException("Invalid role. Must be ADMIN, MANAGER, or EMPLOYEE.");
+        throw ValidationException("Invalid role. Must be ADMIN, MANAGER, or RESOURCE.");
     }
 }
 
@@ -35,7 +35,7 @@ CreatedUserResult UserService::createUser(const CreateUserRequest& request) {
 
     if (request.role != "ADMIN") {
         if (request.department.empty() || request.designation.empty()) {
-            throw ValidationException("department and designation are required for EMPLOYEE and MANAGER roles.");
+            throw ValidationException("department and designation are required for MANAGER and RESOURCE roles.");
         }
     }
 
@@ -48,13 +48,16 @@ CreatedUserResult UserService::createUser(const CreateUserRequest& request) {
     }
 
     User newUser;
-    newUser.fullName       = request.fullName;
-    newUser.email          = request.email;
-    newUser.username       = request.username;
-    newUser.passwordHash   = PasswordUtil::hash(request.tempPassword);
-    newUser.role           = request.role;
-    newUser.isActive       = true;
-    newUser.forcePwdChange = true;
+    newUser.fullName     = request.fullName;
+    newUser.email        = request.email;
+    newUser.username     = request.username;
+    if (!PasswordUtil::meetsStrengthPolicy(request.tempPassword)) {
+        throw ValidationException("Temporary password does not meet strength requirements (min 8 chars, uppercase, digit, special character).");
+    }
+    newUser.passwordHash = PasswordUtil::hash(request.tempPassword);
+    newUser.role         = request.role;
+    newUser.isActive     = true;
+    // password_expires_at defaults to NOW() via DB — force change on first login
 
     const int newUserId = userRepository->create(newUser);
 
@@ -63,15 +66,18 @@ CreatedUserResult UserService::createUser(const CreateUserRequest& request) {
     CreatedUserResult result;
     result.user = createdUser;
 
-    if (request.role != "ADMIN") {
+    if (request.role == "MANAGER" || request.role == "RESOURCE") {
         Employee employeeProfile;
         employeeProfile.userId      = newUserId;
+        employeeProfile.managerId   = 0; // assigned later via assign-manager
         employeeProfile.fullName    = request.fullName;
         employeeProfile.email       = request.email;
         employeeProfile.department  = request.department;
         employeeProfile.designation = request.designation;
+        // Non-empty status signals RESOURCE so create() also inserts resource_status
+        employeeProfile.status      = (request.role == "RESOURCE") ? "BENCH" : "";
         employeeRepository->create(employeeProfile);
-        result.employee = employeeRepository->findByUserId(newUserId);
+        result.employee = employeeRepository->findById(newUserId);
     }
 
     return result;
@@ -109,7 +115,11 @@ void UserService::resetPassword(int userId, const ResetPasswordRequest& request)
         throw NotFoundException("User with ID " + std::to_string(userId) + " not found.");
     }
 
+    if (!PasswordUtil::meetsStrengthPolicy(request.tempPassword)) {
+        throw ValidationException("Temporary password does not meet strength requirements (min 8 chars, uppercase, digit, special character).");
+    }
     const std::string newHash = PasswordUtil::hash(request.tempPassword);
     userRepository->updatePasswordHash(userId, newHash);
-    userRepository->setForcePwdChange(userId, true);
+    userRepository->expirePasswordNow(userId);
 }
+

@@ -4,6 +4,7 @@
 #include "../utils/ConfigLoader.hpp"
 #include "GeminiAdapter.hpp"
 #include "GroqAdapter.hpp"
+#include "CompanyAdapter.hpp"
 
 #include <memory>
 #include <stdexcept>
@@ -20,6 +21,11 @@ public:
 
         if (provider == "groq") {
             return std::make_shared<GroqAdapter>(config.llm.apiKey, config.llm.groqModel);
+        }
+
+        if (provider == "company") {
+            return std::make_shared<CompanyAdapter>(
+                config.llm.companyHost, config.llm.apiKey, config.llm.companyModel);
         }
 
         throw std::runtime_error("Unknown LLM provider: " + provider);

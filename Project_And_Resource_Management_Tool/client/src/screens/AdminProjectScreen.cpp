@@ -34,14 +34,14 @@ static void createProject(const ApiClient& api) {
         {"startDate",         ConsoleUtil::toIsoDate(start)},
         {"endDate",           ConsoleUtil::toIsoDate(end)},
         {"status",            status},
-        {"managerEmployeeId", managerId},
+        {"managerId",        managerId},
         {"totalStoryPoints",  storyPoints}
     }, AppSession::get().token);
 
     if (!resp.success) ConsoleUtil::printError(resp.errorMessage);
     else {
-        const auto& p = resp.body.contains("data") ? resp.body["data"] : resp.body;
-        ConsoleUtil::printSuccess("Project created. ID: " + std::to_string(p.value("projectId", 0)));
+        const auto& createdProject = resp.body.contains("data") ? resp.body["data"] : resp.body;
+        ConsoleUtil::printSuccess("Project created. ID: " + std::to_string(createdProject.value("projectId", 0)));
     }
     ConsoleUtil::pause();
 }
@@ -64,14 +64,14 @@ static void viewAllProjects(const ApiClient& api) {
               << "SP Done/Total\n";
     ConsoleUtil::printSeparator();
 
-    for (const auto& p : data) {
-        const int done  = p.value("completedStoryPoints", 0);
-        const int total = p.value("totalStoryPoints", 0);
-        std::cout << ConsoleUtil::col(std::to_string(p.value("projectId", 0)), 5)
-                  << ConsoleUtil::col(ConsoleUtil::trunc(p.value("name", ""), 21), 22)
-                  << ConsoleUtil::col(ConsoleUtil::fmtDate(p.value("endDate", "")), 12)
-                  << ConsoleUtil::col(p.value("status", ""), 12)
-                  << ConsoleUtil::col(ConsoleUtil::healthIcon(p.value("healthStatus", "")), 10)
+    for (const auto& project : data) {
+        const int done  = project.value("completedStoryPoints", 0);
+        const int total = project.value("totalStoryPoints", 0);
+        std::cout << ConsoleUtil::col(std::to_string(project.value("projectId", 0)), 5)
+                  << ConsoleUtil::col(ConsoleUtil::trunc(project.value("name", ""), 21), 22)
+                  << ConsoleUtil::col(ConsoleUtil::fmtDate(project.value("endDate", "")), 12)
+                  << ConsoleUtil::col(project.value("status", ""), 12)
+                  << ConsoleUtil::col(ConsoleUtil::healthIcon(project.value("healthStatus", "")), 10)
                   << std::to_string(done) + " / " + std::to_string(total) << "\n";
     }
     ConsoleUtil::printSeparator();
@@ -91,8 +91,8 @@ static void updateProject(const ApiClient& api) {
     if (!respGet.success) { ConsoleUtil::printError(respGet.errorMessage); ConsoleUtil::pause(); return; }
 
     nlohmann::json found;
-    for (const auto& p : respGet.body.value("data", nlohmann::json::array())) {
-        if (std::to_string(p.value("projectId", 0)) == idStr) { found = p; break; }
+    for (const auto& project : respGet.body.value("data", nlohmann::json::array())) {
+        if (std::to_string(project.value("projectId", 0)) == idStr) { found = project; break; }
     }
     if (found.is_null()) { ConsoleUtil::printError("Project not found."); ConsoleUtil::pause(); return; }
 
@@ -105,14 +105,21 @@ static void updateProject(const ApiClient& api) {
     std::cout << "Status: (1) PLANNED  (2) ACTIVE  (3) ON_HOLD  (4) COMPLETED  (blank=keep)\n";
     const std::string stOpt = ConsoleUtil::promptInput("Choice: ");
     const std::string spStr = ConsoleUtil::promptInput("Story Points  [" + std::to_string(found.value("totalStoryPoints",0)) + "]: ");
-    const std::string mgrId = ConsoleUtil::promptInput("Manager ID    [" + std::to_string(found.value("managerEmployeeId",0)) + "]: ");
+    const std::string mgrId = ConsoleUtil::promptInput("Manager ID    [" + std::to_string(found.value("managerId",0)) + "]: ");
 
     nlohmann::json payload;
-    if (!name.empty())  payload["name"]              = name;
-    if (!desc.empty())  payload["description"]       = desc;
-    if (!end.empty())   payload["endDate"]           = ConsoleUtil::toIsoDate(end);
+    if (!name.empty())  payload["name"]        = name;
+    if (!desc.empty())  payload["description"] = desc;
+    if (!end.empty()) {
+        const std::string endIso = ConsoleUtil::toIsoDate(end);
+        if (endIso.empty()) {
+            ConsoleUtil::printError("Invalid end date. Use DD-MM-YYYY (e.g. 31-12-2027).");
+            ConsoleUtil::pause(); return;
+        }
+        payload["endDate"] = endIso;
+    }
     if (!spStr.empty()) { try { payload["totalStoryPoints"] = std::stoi(spStr); } catch (...) {} }
-    if (!mgrId.empty()) { try { payload["managerEmployeeId"] = std::stoi(mgrId); } catch (...) {} }
+    if (!mgrId.empty()) { try { payload["managerId"] = std::stoi(mgrId); } catch (...) {} }
     if (!stOpt.empty()) {
         const std::vector<std::string> statuses = {"PLANNED","ACTIVE","ON_HOLD","COMPLETED"};
         int si = 0; try { si = std::stoi(stOpt) - 1; } catch (...) {}
@@ -153,23 +160,23 @@ static void manageMilestones(const ApiClient& api) {
         ConsoleUtil::printSeparator();
 
         int totalSP = 0, doneSP = 0;
-        for (size_t i = 0; i < ms.size(); ++i) {
-            const auto& m = ms[i];
-            const int sp = m.value("storyPoints", 0);
-            totalSP += sp;
-            if (m.value("status", "") == "DONE") doneSP += sp;
+        for (size_t idx = 0; idx < ms.size(); ++idx) {
+            const auto& milestone = ms[idx];
+            const int storyPoints = milestone.value("storyPoints", 0);
+            totalSP += storyPoints;
+            if (milestone.value("status", "") == "DONE") doneSP += storyPoints;
 
-            std::string title = ConsoleUtil::trunc(m.value("title", ""), 23);
-            if (m.value("status", "") != "DONE") {
-                const std::string due = m.value("dueDate", "");
+            std::string title = ConsoleUtil::trunc(milestone.value("title", ""), 23);
+            if (milestone.value("status", "") != "DONE") {
+                const std::string due = milestone.value("dueDate", "");
                 if (due < ConsoleUtil::lastMonday()) title += " ⚠";
             }
 
-            std::cout << ConsoleUtil::col(std::to_string(i + 1), 4)
+            std::cout << ConsoleUtil::col(std::to_string(idx + 1), 4)
                       << ConsoleUtil::col(title, 24)
-                      << ConsoleUtil::col(ConsoleUtil::fmtDate(m.value("dueDate", "")), 12)
-                      << ConsoleUtil::col(std::to_string(sp), 5)
-                      << m.value("status", "") << "\n";
+                      << ConsoleUtil::col(ConsoleUtil::fmtDate(milestone.value("dueDate", "")), 12)
+                      << ConsoleUtil::col(std::to_string(storyPoints), 5)
+                      << milestone.value("status", "") << "\n";
         }
         ConsoleUtil::printSeparator();
         std::cout << "Total: " << totalSP << " SP   |   Done: " << doneSP

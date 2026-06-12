@@ -10,23 +10,23 @@
 EmployeeSkill MySQLSkillRepository::mapRowToSkill(sql::ResultSet* resultSet) {
     EmployeeSkill skill;
     skill.skillId    = resultSet->getInt("skill_id");
-    skill.employeeId = resultSet->getInt("employee_id");
+    skill.userId     = resultSet->getInt("user_id");
     skill.skillName  = resultSet->getString("skill_name");
     skill.category   = resultSet->getString("category");
     skill.proficiency= resultSet->getString("proficiency");
     return skill;
 }
 
-std::vector<EmployeeSkill> MySQLSkillRepository::findByEmployeeId(int employeeId) {
+std::vector<EmployeeSkill> MySQLSkillRepository::findByUserId(int userId) {
     try {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                "SELECT skill_id, employee_id, skill_name, category, proficiency "
-                "FROM employee_skills WHERE employee_id = ? ORDER BY skill_id"
+                "SELECT skill_id, user_id, skill_name, category, proficiency "
+                "FROM user_skills WHERE user_id = ? ORDER BY skill_id"
             )
         );
-        statement->setInt(1, employeeId);
+        statement->setInt(1, userId);
         std::unique_ptr<sql::ResultSet> resultSet(statement->executeQuery());
         std::vector<EmployeeSkill> skills;
         while (resultSet->next()) {
@@ -34,7 +34,7 @@ std::vector<EmployeeSkill> MySQLSkillRepository::findByEmployeeId(int employeeId
         }
         return skills;
     } catch (const sql::SQLException& sqlException) {
-        throw AppException(std::string("DB error in findSkillsByEmployee: ") + sqlException.what());
+        throw AppException(std::string("DB error in findSkillsByUser: ") + sqlException.what());
     }
 }
 
@@ -43,8 +43,8 @@ std::optional<EmployeeSkill> MySQLSkillRepository::findById(int skillId) {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                "SELECT skill_id, employee_id, skill_name, category, proficiency "
-                "FROM employee_skills WHERE skill_id = ?"
+                "SELECT skill_id, user_id, skill_name, category, proficiency "
+                "FROM user_skills WHERE skill_id = ?"
             )
         );
         statement->setInt(1, skillId);
@@ -63,11 +63,11 @@ int MySQLSkillRepository::create(const EmployeeSkill& skill) {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                "INSERT INTO employee_skills (employee_id, skill_name, category, proficiency) "
+                "INSERT INTO user_skills (user_id, skill_name, category, proficiency) "
                 "VALUES (?, ?, ?, ?)"
             )
         );
-        statement->setInt(1, skill.employeeId);
+        statement->setInt(1, skill.userId);
         statement->setString(2, skill.skillName);
         statement->setString(3, skill.category);
         statement->setString(4, skill.proficiency);
@@ -89,7 +89,7 @@ void MySQLSkillRepository::update(const EmployeeSkill& skill) {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                "UPDATE employee_skills SET skill_name = ?, category = ?, proficiency = ? "
+                "UPDATE user_skills SET skill_name = ?, category = ?, proficiency = ? "
                 "WHERE skill_id = ?"
             )
         );
@@ -108,7 +108,7 @@ void MySQLSkillRepository::remove(int skillId) {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                "DELETE FROM employee_skills WHERE skill_id = ?"
+                "DELETE FROM user_skills WHERE skill_id = ?"
             )
         );
         statement->setInt(1, skillId);
@@ -118,20 +118,21 @@ void MySQLSkillRepository::remove(int skillId) {
     }
 }
 
-bool MySQLSkillRepository::skillBelongsToEmployee(int skillId, int employeeId) {
+bool MySQLSkillRepository::skillBelongsToUser(int skillId, int userId) {
     try {
         auto connection = DatabasePool::getInstance().acquire();
         std::unique_ptr<sql::PreparedStatement> statement(
             connection->prepareStatement(
-                "SELECT COUNT(*) FROM employee_skills WHERE skill_id = ? AND employee_id = ?"
+                "SELECT COUNT(*) FROM user_skills WHERE skill_id = ? AND user_id = ?"
             )
         );
         statement->setInt(1, skillId);
-        statement->setInt(2, employeeId);
+        statement->setInt(2, userId);
         std::unique_ptr<sql::ResultSet> resultSet(statement->executeQuery());
         resultSet->next();
         return resultSet->getInt(1) > 0;
     } catch (const sql::SQLException& sqlException) {
-        throw AppException(std::string("DB error in skillBelongsToEmployee: ") + sqlException.what());
+        throw AppException(std::string("DB error in skillBelongsToUser: ") + sqlException.what());
     }
 }
+

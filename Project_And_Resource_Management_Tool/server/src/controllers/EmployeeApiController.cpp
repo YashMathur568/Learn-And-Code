@@ -22,21 +22,25 @@ EmployeeApiController::EmployeeApiController()
           std::make_shared<MySQLTimesheetRepository>(),
           std::make_shared<MySQLAllocationRepository>(),
           std::make_shared<MySQLEmployeeRepository>()
-      )) {}
+      )),
+      projectRepository(std::make_shared<MySQLProjectRepository>()) {}
 
 void EmployeeApiController::getMyAllocations(
     const drogon::HttpRequestPtr& request,
     std::function<void(const drogon::HttpResponsePtr&)>&& callback
 ) {
     try {
-        RoleGuard::requireAnyRole(request, {"EMPLOYEE", "MANAGER"});
+        RoleGuard::requireAnyRole(request, {"RESOURCE", "MANAGER"});
         const auto claims = RoleGuard::extractClaims(request);
 
-        const auto allocations = allocationService->getActiveByEmployeeId(claims.employeeId);
+        const auto allocations = allocationService->getActiveByUserId(claims.userId);
 
         nlohmann::json dataArray = nlohmann::json::array();
         for (const auto& allocation : allocations) {
-            dataArray.push_back(allocationToJson(allocation));
+            auto allocJson = allocationToJson(allocation);
+            const auto project = projectRepository->findById(allocation.projectId);
+            allocJson["projectName"] = project.has_value() ? project->name : "";
+            dataArray.push_back(allocJson);
         }
 
         callback(ResponseBuilder::success({{"data", dataArray}}));
@@ -53,20 +57,23 @@ void EmployeeApiController::getMyTimesheets(
     std::function<void(const drogon::HttpResponsePtr&)>&& callback
 ) {
     try {
-        RoleGuard::requireAnyRole(request, {"EMPLOYEE", "MANAGER"});
+        RoleGuard::requireAnyRole(request, {"RESOURCE", "MANAGER"});
         const auto claims = RoleGuard::extractClaims(request);
 
-        const auto timesheets = timesheetService->getByEmployeeId(claims.employeeId);
+        const auto timesheets = timesheetService->getByUserId(claims.userId);
 
         nlohmann::json dataArray = nlohmann::json::array();
         for (const auto& record : timesheets) {
             nlohmann::json tsJson = timesheetToJson(record.timesheet);
 
             nlohmann::json entriesArray = nlohmann::json::array();
+            int totalHours = 0;
             for (const auto& entry : record.entries) {
                 entriesArray.push_back(entryToJson(entry));
+                totalHours += entry.hours;
             }
-            tsJson["entries"] = entriesArray;
+            tsJson["entries"]    = entriesArray;
+            tsJson["totalHours"] = totalHours;
             dataArray.push_back(tsJson);
         }
 
@@ -84,13 +91,13 @@ void EmployeeApiController::submitTimesheet(
     std::function<void(const drogon::HttpResponsePtr&)>&& callback
 ) {
     try {
-        RoleGuard::requireAnyRole(request, {"EMPLOYEE", "MANAGER"});
+        RoleGuard::requireAnyRole(request, {"RESOURCE", "MANAGER"});
         const auto claims = RoleGuard::extractClaims(request);
 
         const auto jsonBody      = nlohmann::json::parse(request->getBody());
         const auto sheetRequest  = SubmitTimesheetRequest::fromJson(jsonBody);
 
-        const TimesheetWithEntries result = timesheetService->submitTimesheet(claims.employeeId, sheetRequest);
+        const TimesheetWithEntries result = timesheetService->submitTimesheet(claims.userId, sheetRequest);
 
         nlohmann::json tsJson = timesheetToJson(result.timesheet);
         nlohmann::json entriesArray = nlohmann::json::array();

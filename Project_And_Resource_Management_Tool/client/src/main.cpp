@@ -14,8 +14,14 @@
 
 int main() {
 #ifdef _WIN32
+    // Enable UTF-8 output
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
+    // Enable ANSI escape codes (clear screen, colours) in Windows console
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD dwMode = 0;
+    GetConsoleMode(hOut, &dwMode);
+    SetConsoleMode(hOut, dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 #endif
     const std::string baseUrl = "http://localhost:8080";
     const ApiClient   api(baseUrl);
@@ -48,7 +54,7 @@ int main() {
         const std::string role = AppSession::get().role;
         if (role == "ADMIN")          showAdminMenu(api);
         else if (role == "MANAGER")   showManagerMenu(api);
-        else if (role == "EMPLOYEE")  showEmployeeMenu(api);
+        else if (role == "RESOURCE")  showEmployeeMenu(api);
         else {
             ConsoleUtil::printError("Unknown role: " + role);
             AppSession::get().clear();

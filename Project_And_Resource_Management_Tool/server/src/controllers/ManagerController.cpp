@@ -51,31 +51,48 @@ void ManagerController::getDashboard(
         RoleGuard::requireRole(request, "MANAGER");
         const auto claims = RoleGuard::extractClaims(request);
 
-        const auto employees = employeeService->getByManagerId(claims.employeeId);
+        const auto employees = employeeService->getByManagerId(claims.userId);
 
         nlohmann::json benchArray  = nlohmann::json::array();
         nlohmann::json activeArray = nlohmann::json::array();
 
         for (const auto& employee : employees) {
+            const auto skills = employeeService->getSkills(employee.userId);
+            nlohmann::json skillArray = nlohmann::json::array();
+            for (const auto& skill : skills) {
+                skillArray.push_back({
+                    {"skillName",   skill.skillName},
+                    {"category",    skill.category},
+                    {"proficiency", skill.proficiency}
+                });
+            }
+
             nlohmann::json empJson = {
-                {"employeeId",  employee.employeeId},
+                {"userId",      employee.userId},
                 {"fullName",    employee.fullName},
                 {"department",  employee.department},
                 {"designation", employee.designation}
             };
 
-            if (employee.status == "BENCH") {
-                benchArray.push_back(empJson);
+            if (employee.status == "BENCH" || employee.status.empty()) {
+                const int totalUtil = allocationService->getTotalUtilisation(employee.userId);
+                if (totalUtil == 0) {
+                    empJson["skills"] = skillArray;
+                    benchArray.push_back(empJson);
+                } else {
+                    empJson["totalAllocationPct"] = totalUtil;
+                    activeArray.push_back(empJson);
+                }
             } else {
-                const int totalUtilisation = allocationService->getTotalUtilisation(employee.employeeId);
-                empJson["totalUtilisation"] = totalUtilisation;
+                const int totalUtil = allocationService->getTotalUtilisation(employee.userId);
+                empJson["totalAllocationPct"] = totalUtil;
                 activeArray.push_back(empJson);
             }
         }
 
         callback(ResponseBuilder::success({
-            {"bench",  benchArray},
-            {"active", activeArray}
+            {"benchEmployees",     benchArray},
+            {"allocatedEmployees", activeArray}
         }));
 
     } catch (const UnauthorizedException& ex) {
@@ -95,11 +112,11 @@ void ManagerController::getEmployeeDetail(
         const auto claims = RoleGuard::extractClaims(request);
 
         const auto employee = employeeService->getById(id);
-        if (employee.managerId != claims.employeeId) {
+        if (employee.managerId != claims.userId) {
             throw UnauthorizedException("This employee is not in your team.");
         }
 
-        const auto allocations = allocationService->getActiveByEmployeeId(id);
+        const auto allocations = allocationService->getActiveByUserId(id);
         const auto skills      = employeeService->getSkills(id);
 
         nlohmann::json allocArray = nlohmann::json::array();
@@ -138,7 +155,7 @@ void ManagerController::createAllocation(
         const auto jsonBody       = nlohmann::json::parse(request->getBody());
         const auto allocRequest   = CreateAllocationRequest::fromJson(jsonBody);
 
-        const Allocation newAllocation = allocationService->createAllocation(claims.employeeId, allocRequest);
+        const Allocation newAllocation = allocationService->createAllocation(claims.userId, allocRequest);
         callback(ResponseBuilder::success(allocationToJson(newAllocation), drogon::k201Created));
 
     } catch (const UnauthorizedException& ex) {
@@ -163,9 +180,9 @@ void ManagerController::endAllocation(
         RoleGuard::requireRole(request, "MANAGER");
         const auto claims = RoleGuard::extractClaims(request);
 
-        const Allocation endedAllocation = allocationService->endAllocation(id, claims.employeeId);
+        const Allocation endedAllocation = allocationService->endAllocation(id, claims.userId);
 
-        const auto employee = employeeService->getById(endedAllocation.employeeId);
+        const auto employee = employeeService->getById(endedAllocation.userId);
         const auto project  = projectService->getProjectById(endedAllocation.projectId);
 
         callback(ResponseBuilder::success({
@@ -194,7 +211,7 @@ void ManagerController::getProjects(
         RoleGuard::requireRole(request, "MANAGER");
         const auto claims = RoleGuard::extractClaims(request);
 
-        const auto projects = projectService->getProjectsByManagerId(claims.employeeId);
+        const auto projects = projectService->getProjectsByManagerId(claims.userId);
 
         nlohmann::json dataArray = nlohmann::json::array();
         for (const auto& project : projects) {
@@ -220,7 +237,7 @@ void ManagerController::getProjectDetail(
         const auto claims = RoleGuard::extractClaims(request);
 
         const auto project = projectService->getProjectById(id);
-        if (project.managerId != claims.employeeId) {
+        if (project.managerId != claims.userId) {
             throw UnauthorizedException("You do not manage this project.");
         }
 
@@ -234,14 +251,15 @@ void ManagerController::getProjectDetail(
 
         nlohmann::json teamArray = nlohmann::json::array();
         for (const auto& alloc : allocations) {
-            const auto employee = employeeService->getById(alloc.employeeId);
+            const auto employee = employeeService->getById(alloc.userId);
             teamArray.push_back({
-                {"allocationId",   alloc.allocationId},
-                {"employeeId",     alloc.employeeId},
-                {"employeeName",   employee.fullName},
-                {"utilisation",    alloc.utilisation},
-                {"fromDate",       alloc.fromDate},
-                {"toDate",         alloc.toDate}
+                {"allocationId",         alloc.allocationId},
+                {"userId",               alloc.userId},
+                {"employeeName",         employee.fullName},
+                {"allocationPercentage", alloc.utilisation},
+                {"fromDate",             alloc.fromDate},
+                {"toDate",               alloc.toDate},
+                {"isActive",             true}
             });
         }
 
@@ -263,12 +281,13 @@ void ManagerController::getProjectDetail(
             }
         }
 
-        callback(ResponseBuilder::success({
-            {"project",    projectToJson(project)},
-            {"milestones", milestoneArray},
-            {"team",       teamArray},
-            {"riskFlags",  riskFlags}
-        }));
+        callback(ResponseBuilder::success([&]() {
+            nlohmann::json dataObj = projectToJson(project);
+            dataObj["milestones"]  = milestoneArray;
+            dataObj["allocations"] = teamArray;
+            dataObj["riskFlags"]   = riskFlags;
+            return dataObj;
+        }()));
 
     } catch (const UnauthorizedException& ex) {
         callback(ResponseBuilder::error(ex.what(), drogon::k403Forbidden));
@@ -292,20 +311,23 @@ void ManagerController::getTeamTimesheets(
             throw ValidationException("Query parameter 'weekStart' is required.");
         }
 
-        const auto timesheets = timesheetService->getTeamTimesheets(claims.employeeId, weekStart);
+        const auto timesheets = timesheetService->getTeamTimesheets(claims.userId, weekStart);
 
         nlohmann::json dataArray = nlohmann::json::array();
         for (const auto& record : timesheets) {
             nlohmann::json tsJson = timesheetToJson(record.timesheet);
 
-            const auto employee        = employeeService->getById(record.timesheet.employeeId);
+            const auto employee        = employeeService->getById(record.timesheet.userId);
             tsJson["employeeName"]     = employee.fullName;
 
             nlohmann::json entriesArray = nlohmann::json::array();
+            int totalHours = 0;
             for (const auto& entry : record.entries) {
                 entriesArray.push_back(entryToJson(entry));
+                totalHours += entry.hours;
             }
-            tsJson["entries"] = entriesArray;
+            tsJson["entries"]    = entriesArray;
+            tsJson["totalHours"] = totalHours;
             dataArray.push_back(tsJson);
         }
 

@@ -5,7 +5,7 @@
 
 class JwtUtil {
 public:
-    static std::string   generate(int userId, const std::string& role, int employeeId);
+    static std::string   generate(int userId, const std::string& role);
     static TokenClaims   verify(const std::string& token);
 
 private:
