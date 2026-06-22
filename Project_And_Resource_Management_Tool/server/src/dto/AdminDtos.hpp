@@ -1,0 +1,138 @@
+#pragma once
+
+#include "User.hpp"
+#include "Resource.hpp"
+#include "ResourceSkill.hpp"
+#include <nlohmann/json.hpp>
+#include <string>
+
+struct CreateUserRequest {
+    std::string fullName;
+    std::string email;
+    std::string username;
+    std::string tempPassword;
+    std::string role;
+    std::string department;
+    std::string designation;
+    int         managerId{0};
+
+    static CreateUserRequest fromJson(const nlohmann::json& body) {
+        CreateUserRequest request;
+        request.fullName     = body.at("fullName").get<std::string>();
+        request.email        = body.at("email").get<std::string>();
+        request.username     = body.at("username").get<std::string>();
+        request.tempPassword = body.at("tempPassword").get<std::string>();
+        request.role         = body.at("role").get<std::string>();
+        request.department   = body.value("department", "");
+        request.designation  = body.value("designation", "");
+        request.managerId    = body.value("managerId", 0);
+        return request;
+    }
+};
+
+struct ResetPasswordRequest {
+    std::string tempPassword;
+
+    static ResetPasswordRequest fromJson(const nlohmann::json& body) {
+        ResetPasswordRequest request;
+        request.tempPassword = body.at("tempPassword").get<std::string>();
+        return request;
+    }
+};
+
+struct AssignManagerRequest {
+    int managerId{0};
+
+    static AssignManagerRequest fromJson(const nlohmann::json& body) {
+        AssignManagerRequest request;
+        request.managerId = body.at("managerId").get<int>();
+        return request;
+    }
+};
+
+struct UpdateResourceRequest {
+    std::string fullName;
+    std::string email;
+    std::string department;
+    std::string designation;
+
+    static UpdateResourceRequest fromJson(const nlohmann::json& body) {
+        UpdateResourceRequest request;
+        request.fullName    = body.at("fullName").get<std::string>();
+        request.email       = body.at("email").get<std::string>();
+        request.department  = body.at("department").get<std::string>();
+        request.designation = body.at("designation").get<std::string>();
+        return request;
+    }
+};
+
+struct ChangeRoleRequest {
+    std::string newRole;
+    std::string department;
+    std::string designation;
+
+    static ChangeRoleRequest fromJson(const nlohmann::json& body) {
+        ChangeRoleRequest request;
+        request.newRole     = body.at("newRole").get<std::string>();
+        request.department  = body.value("department", "");
+        request.designation = body.value("designation", "");
+        return request;
+    }
+};
+
+struct SkillRequest {
+    std::string skillName;
+    std::string category;
+    std::string proficiency;
+
+    static SkillRequest fromJson(const nlohmann::json& body) {
+        SkillRequest request;
+        request.skillName   = body.at("skillName").get<std::string>();
+        request.category    = body.at("category").get<std::string>();
+        request.proficiency = body.at("proficiency").get<std::string>();
+        return request;
+    }
+};
+
+inline nlohmann::json userToJson(const User& user) {
+    return {
+        {"userId",             user.userId},
+        {"fullName",           user.fullName},
+        {"email",              user.email},
+        {"username",           user.username},
+        {"role",               user.role},
+        {"isActive",           user.isActive},
+        {"passwordExpiresAt",  user.passwordExpiresAt},
+        {"createdAt",          user.createdAt}
+    };
+}
+
+inline nlohmann::json resourceToJson(const Resource& resource) {
+    nlohmann::json json = {
+        {"userId",      resource.userId},
+        {"role",        resource.role},
+        {"fullName",    resource.fullName},
+        {"email",       resource.email},
+        {"department",  resource.department},
+        {"designation", resource.designation},
+        {"status",      resource.status},
+        {"isActive",    resource.isActive},
+        {"isFrozen",    resource.isFrozen}
+    };
+    if (resource.managerId > 0) {
+        json["managerId"] = resource.managerId;
+    } else {
+        json["managerId"] = nullptr;
+    }
+    return json;
+}
+
+inline nlohmann::json skillToJson(const ResourceSkill& skill) {
+    return {
+        {"skillId",     skill.skillId},
+        {"userId",      skill.userId},
+        {"skillName",   skill.skillName},
+        {"category",    skill.category},
+        {"proficiency", skill.proficiency}
+    };
+}

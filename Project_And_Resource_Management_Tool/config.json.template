@@ -1,0 +1,18 @@
+{
+  "database": {
+    "host": "127.0.0.1",
+    "port": 3306,
+    "name": "prm_tool",
+    "username": "prm_user",
+    "password": "your_db_password_here"
+  },
+  "llm": {
+    "provider": "gemini",
+    "apiKey": "your_llm_api_key_here",
+    "geminiModel": "gemini-1.5-flash",
+    "groqModel": "llama3-70b-8192"
+  },
+  "schedulerIntervalHours": 4,
+  "maxWeeklyHours": 40,
+  "serverPort": 8080
+}
