@@ -39,6 +39,7 @@ CREATE TABLE users (
     password_hash       VARCHAR(255) NOT NULL,
     role_id             INT          NOT NULL,
     is_active           TINYINT(1)   NOT NULL DEFAULT 1,
+    is_frozen           TINYINT(1)   NOT NULL DEFAULT 0,
     password_expires_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT pk_users          PRIMARY KEY (user_id),
@@ -47,16 +48,16 @@ CREATE TABLE users (
     CONSTRAINT fk_users_role     FOREIGN KEY (role_id) REFERENCES roles (role_id)
 );
 
--- \u2500\u2500\u2500 Role-specific profile tables \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+-- \u2500\u2500\u2500 User profile (all roles) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
-CREATE TABLE resource_profile (
+CREATE TABLE user_profile (
     user_id     INT          NOT NULL,
     manager_id  INT          NULL,
     department  VARCHAR(100) NOT NULL,
     designation VARCHAR(100) NOT NULL,
-    CONSTRAINT pk_resource_profile    PRIMARY KEY (user_id),
-    CONSTRAINT fk_rprof_user          FOREIGN KEY (user_id)    REFERENCES users (user_id),
-    CONSTRAINT fk_rprof_manager       FOREIGN KEY (manager_id) REFERENCES users (user_id)
+    CONSTRAINT pk_user_profile       PRIMARY KEY (user_id),
+    CONSTRAINT fk_uprof_user          FOREIGN KEY (user_id)    REFERENCES users (user_id),
+    CONSTRAINT fk_uprof_manager       FOREIGN KEY (manager_id) REFERENCES users (user_id)
 );
 
 CREATE TABLE resource_status (
@@ -146,6 +147,16 @@ CREATE TABLE timesheet_entries (
     CONSTRAINT chk_entry_hours      CHECK (hours BETWEEN 1 AND 168)
 );
 
+CREATE TABLE timesheet_reminder_log (
+    user_id           INT         NOT NULL,
+    week_start        DATE        NOT NULL,
+    reminder1_sent_at DATETIME    DEFAULT NULL,
+    reminder2_sent_at DATETIME    DEFAULT NULL,
+    frozen_at         DATETIME    DEFAULT NULL,
+    CONSTRAINT pk_timesheet_reminder_log PRIMARY KEY (user_id, week_start),
+    CONSTRAINT fk_reminder_log_user      FOREIGN KEY (user_id) REFERENCES users (user_id)
+);
+
 CREATE TABLE system_config (
     config_key   VARCHAR(50) NOT NULL,
     config_value TEXT        NOT NULL,
@@ -166,8 +177,8 @@ CREATE INDEX idx_entries_timesheet
 CREATE INDEX idx_timesheets_user_week
     ON timesheets (user_id, week_start);
 
-CREATE INDEX idx_resource_profile_manager
-    ON resource_profile (manager_id);
+CREATE INDEX idx_user_profile_manager
+    ON user_profile (manager_id);
 
 CREATE INDEX idx_role_permissions_role
     ON role_permissions (role_id, expires_at);

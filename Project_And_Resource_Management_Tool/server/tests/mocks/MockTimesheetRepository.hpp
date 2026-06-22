@@ -1,5 +1,5 @@
 #pragma once
-#include "../../src/repositories/ITimesheetRepository.hpp"
+#include "ITimesheetRepository.hpp"
 #include <gmock/gmock.h>
 
 class MockTimesheetRepository : public ITimesheetRepository {

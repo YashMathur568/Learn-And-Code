@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../models/Project.hpp"
-#include "../models/Milestone.hpp"
-#include "../models/SystemConfig.hpp"
+#include "Project.hpp"
+#include "Milestone.hpp"
+#include "SystemConfig.hpp"
 #include <nlohmann/json.hpp>
 #include <string>
 
@@ -54,12 +54,14 @@ struct CreateMilestoneRequest {
     std::string title;
     std::string dueDate;
     std::string status;
+    int         storyPoints{0};
 
     static CreateMilestoneRequest fromJson(const nlohmann::json& body) {
         CreateMilestoneRequest request;
-        request.title   = body.at("title").get<std::string>();
-        request.dueDate = body.at("dueDate").get<std::string>();
-        request.status  = body.value("status", "NOT_STARTED");
+        request.title       = body.at("title").get<std::string>();
+        request.dueDate     = body.at("dueDate").get<std::string>();
+        request.status      = body.value("status", "NOT_STARTED");
+        request.storyPoints = body.value("storyPoints", 0);
         return request;
     }
 };
@@ -109,10 +111,11 @@ inline nlohmann::json projectToJson(const Project& project) {
 
 inline nlohmann::json milestoneToJson(const Milestone& milestone) {
     return {
-        {"milestoneId", milestone.milestoneId},
-        {"projectId",   milestone.projectId},
-        {"title",       milestone.title},
-        {"dueDate",     milestone.dueDate},
-        {"status",      milestone.status}
+        {"milestoneId",  milestone.milestoneId},
+        {"projectId",    milestone.projectId},
+        {"title",        milestone.title},
+        {"dueDate",      milestone.dueDate},
+        {"status",       milestone.status},
+        {"storyPoints",  milestone.storyPoints}
     };
 }

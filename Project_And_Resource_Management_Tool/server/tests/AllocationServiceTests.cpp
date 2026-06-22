@@ -1,20 +1,20 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include "services/AllocationService.hpp"
-#include "utils/AppException.hpp"
-#include "utils/DateUtils.hpp"
+#include "AllocationService.hpp"
+#include "AppException.hpp"
+#include "DateUtils.hpp"
 #include "mocks/MockAllocationRepository.hpp"
-#include "mocks/MockEmployeeRepository.hpp"
+#include "mocks/MockResourceRepository.hpp"
 #include "mocks/MockProjectRepository.hpp"
 
 using ::testing::Return;
 using ::testing::_;
 using ::testing::NiceMock;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
-// Returns a project that belongs to manager 1, active dates spanning 2 years
+
+
 static Project makeActiveProject(int managerId = 1) {
     Project proj;
     proj.projectId = 10;
@@ -25,43 +25,43 @@ static Project makeActiveProject(int managerId = 1) {
     return proj;
 }
 
-static Employee makeActiveEmployee(int userId = 5) {
-    Employee emp;
-    emp.userId   = userId;
-    emp.isActive = true;
-    emp.status   = "BENCH";
-    return emp;
+static Resource makeActiveResource(int userId = 5) {
+    Resource res;
+    res.userId   = userId;
+    res.isActive = true;
+    res.status   = "BENCH";
+    return res;
 }
 
-// A valid allocation request that should succeed with the fixtures above
+
 static CreateAllocationRequest validRequest() {
     CreateAllocationRequest req;
     req.userId      = 5;
     req.projectId   = 10;
     req.utilisation = 50;
-    req.fromDate    = "2027-01-05";  // a Monday, inside project range
+    req.fromDate    = "2027-01-05";
     req.toDate      = "2027-06-30";
     return req;
 }
 
-// ── Fixture ───────────────────────────────────────────────────────────────────
+
 
 class AllocationServiceTest : public ::testing::Test {
 protected:
     std::shared_ptr<MockAllocationRepository> allocRepo;
-    std::shared_ptr<MockEmployeeRepository>   empRepo;
+    std::shared_ptr<MockResourceRepository>   resRepo;
     std::shared_ptr<MockProjectRepository>    projRepo;
     std::unique_ptr<AllocationService>        service;
 
     void SetUp() override {
         allocRepo = std::make_shared<NiceMock<MockAllocationRepository>>();
-        empRepo   = std::make_shared<NiceMock<MockEmployeeRepository>>();
+        resRepo   = std::make_shared<NiceMock<MockResourceRepository>>();
         projRepo  = std::make_shared<NiceMock<MockProjectRepository>>();
-        service   = std::make_unique<AllocationService>(allocRepo, empRepo, projRepo);
+        service   = std::make_unique<AllocationService>(allocRepo, resRepo, projRepo);
     }
 };
 
-// ── createAllocation: input validation ───────────────────────────────────────
+
 
 TEST_F(AllocationServiceTest, CreateAllocation_ZeroUtilisation_ThrowsValidation) {
     auto req = validRequest();
@@ -77,7 +77,7 @@ TEST_F(AllocationServiceTest, CreateAllocation_OverHundredUtilisation_ThrowsVali
 
 TEST_F(AllocationServiceTest, CreateAllocation_InvalidFromDate_ThrowsValidation) {
     auto req = validRequest();
-    req.fromDate = "not-a-date";
+    req.fromDate = "not-allocation-date";
     EXPECT_THROW(service->createAllocation(1, req), ValidationException);
 }
 
@@ -100,7 +100,7 @@ TEST_F(AllocationServiceTest, CreateAllocation_EqualDates_ThrowsValidation) {
     EXPECT_THROW(service->createAllocation(1, req), ValidationException);
 }
 
-// ── createAllocation: project checks ─────────────────────────────────────────
+
 
 TEST_F(AllocationServiceTest, CreateAllocation_ProjectNotFound_ThrowsNotFound) {
     EXPECT_CALL(*projRepo, findById(10)).WillOnce(Return(std::nullopt));
@@ -108,57 +108,57 @@ TEST_F(AllocationServiceTest, CreateAllocation_ProjectNotFound_ThrowsNotFound) {
 }
 
 TEST_F(AllocationServiceTest, CreateAllocation_WrongManager_ThrowsUnauthorized) {
-    auto proj = makeActiveProject(/*managerId=*/99);
+    auto proj = makeActiveProject(99);
     EXPECT_CALL(*projRepo, findById(10)).WillOnce(Return(proj));
     EXPECT_THROW(service->createAllocation(1, validRequest()), UnauthorizedException);
 }
 
 TEST_F(AllocationServiceTest, CreateAllocation_FromDateBeforeProjectStart_ThrowsValidation) {
     auto proj = makeActiveProject();
-    proj.startDate = "2027-06-01";  // request fromDate is 2027-01-05 — before start
+    proj.startDate = "2027-06-01";
     EXPECT_CALL(*projRepo, findById(10)).WillOnce(Return(proj));
     EXPECT_THROW(service->createAllocation(1, validRequest()), ValidationException);
 }
 
 TEST_F(AllocationServiceTest, CreateAllocation_ToDdateAfterProjectEnd_ThrowsValidation) {
     auto proj = makeActiveProject();
-    proj.endDate = "2027-03-01";  // request toDate is 2027-06-30 — after project end
+    proj.endDate = "2027-03-01";
     EXPECT_CALL(*projRepo, findById(10)).WillOnce(Return(proj));
     EXPECT_THROW(service->createAllocation(1, validRequest()), ValidationException);
 }
 
-// ── createAllocation: employee checks ────────────────────────────────────────
 
-TEST_F(AllocationServiceTest, CreateAllocation_EmployeeNotFound_ThrowsNotFound) {
+
+TEST_F(AllocationServiceTest, CreateAllocation_ResourceNotFound_ThrowsNotFound) {
     EXPECT_CALL(*projRepo,  findById(10)).WillOnce(Return(makeActiveProject()));
-    EXPECT_CALL(*empRepo,   findById(5)).WillOnce(Return(std::nullopt));
+    EXPECT_CALL(*resRepo,   findById(5)).WillOnce(Return(std::nullopt));
     EXPECT_THROW(service->createAllocation(1, validRequest()), NotFoundException);
 }
 
-TEST_F(AllocationServiceTest, CreateAllocation_InactiveEmployee_ThrowsValidation) {
-    auto emp = makeActiveEmployee();
-    emp.isActive = false;
+TEST_F(AllocationServiceTest, CreateAllocation_InactiveResource_ThrowsValidation) {
+    auto res = makeActiveResource();
+    res.isActive = false;
     EXPECT_CALL(*projRepo, findById(10)).WillOnce(Return(makeActiveProject()));
-    EXPECT_CALL(*empRepo,  findById(5)).WillOnce(Return(emp));
+    EXPECT_CALL(*resRepo,  findById(5)).WillOnce(Return(res));
     EXPECT_THROW(service->createAllocation(1, validRequest()), ValidationException);
 }
 
 TEST_F(AllocationServiceTest, CreateAllocation_WouldExceed100Percent_ThrowsValidation) {
     EXPECT_CALL(*projRepo,  findById(10)).WillOnce(Return(makeActiveProject()));
-    EXPECT_CALL(*empRepo,   findById(5)).WillOnce(Return(makeActiveEmployee()));
+    EXPECT_CALL(*resRepo,   findById(5)).WillOnce(Return(makeActiveResource()));
     EXPECT_CALL(*allocRepo, getTotalActiveUtilisation(5)).WillOnce(Return(60));
-    // 60 + 50 = 110 > 100 → should throw
+
     EXPECT_THROW(service->createAllocation(1, validRequest()), ValidationException);
 }
 
-// ── createAllocation: success path ───────────────────────────────────────────
+
 
 TEST_F(AllocationServiceTest, CreateAllocation_ValidRequest_ReturnsAllocation) {
     EXPECT_CALL(*projRepo,  findById(10)).WillOnce(Return(makeActiveProject()));
-    EXPECT_CALL(*empRepo,   findById(5)).WillOnce(Return(makeActiveEmployee()));
+    EXPECT_CALL(*resRepo,   findById(5)).WillOnce(Return(makeActiveResource()));
     EXPECT_CALL(*allocRepo, getTotalActiveUtilisation(5)).WillOnce(Return(30));
     EXPECT_CALL(*allocRepo, create(_)).WillOnce(Return(42));
-    EXPECT_CALL(*empRepo,   setStatus(5, "ALLOCATED"));
+    EXPECT_CALL(*resRepo,   setStatus(5, "ALLOCATED"));
 
     const Allocation result = service->createAllocation(1, validRequest());
     EXPECT_EQ(result.allocationId, 42);
@@ -168,7 +168,7 @@ TEST_F(AllocationServiceTest, CreateAllocation_ValidRequest_ReturnsAllocation) {
     EXPECT_TRUE(result.isActive);
 }
 
-// ── endAllocation ─────────────────────────────────────────────────────────────
+
 
 TEST_F(AllocationServiceTest, EndAllocation_NotFound_ThrowsNotFound) {
     EXPECT_CALL(*allocRepo, findById(1)).WillOnce(Return(std::nullopt));
@@ -189,9 +189,9 @@ TEST_F(AllocationServiceTest, EndAllocation_WrongManager_ThrowsUnauthorized) {
     alloc.projectId    = 10;
     alloc.isActive     = true;
     EXPECT_CALL(*allocRepo, findById(1)).WillOnce(Return(alloc));
-    auto proj = makeActiveProject(/*managerId=*/99);
+    auto proj = makeActiveProject(99);
     EXPECT_CALL(*projRepo, findById(10)).WillOnce(Return(proj));
-    EXPECT_THROW(service->endAllocation(1, /*managerUserId=*/1), UnauthorizedException);
+    EXPECT_THROW(service->endAllocation(1, 1), UnauthorizedException);
 }
 
 TEST_F(AllocationServiceTest, EndAllocation_LastAllocation_SetsStatusToBench) {
@@ -203,8 +203,8 @@ TEST_F(AllocationServiceTest, EndAllocation_LastAllocation_SetsStatusToBench) {
     EXPECT_CALL(*allocRepo, findById(1)).WillOnce(Return(alloc));
     EXPECT_CALL(*projRepo,  findById(10)).WillOnce(Return(makeActiveProject()));
     EXPECT_CALL(*allocRepo, end(1));
-    EXPECT_CALL(*empRepo,   hasActiveAllocations(5)).WillOnce(Return(false));
-    EXPECT_CALL(*empRepo,   setStatus(5, "BENCH"));
+    EXPECT_CALL(*resRepo,   hasActiveAllocations(5)).WillOnce(Return(false));
+    EXPECT_CALL(*resRepo,   setStatus(5, "BENCH"));
 
     const Allocation result = service->endAllocation(1, 1);
     EXPECT_FALSE(result.isActive);
@@ -219,13 +219,13 @@ TEST_F(AllocationServiceTest, EndAllocation_StillHasOtherAllocations_StatusUncha
     EXPECT_CALL(*allocRepo, findById(1)).WillOnce(Return(alloc));
     EXPECT_CALL(*projRepo,  findById(10)).WillOnce(Return(makeActiveProject()));
     EXPECT_CALL(*allocRepo, end(1));
-    EXPECT_CALL(*empRepo,   hasActiveAllocations(5)).WillOnce(Return(true));
-    EXPECT_CALL(*empRepo,   setStatus(_, _)).Times(0);  // must NOT change status
+    EXPECT_CALL(*resRepo,   hasActiveAllocations(5)).WillOnce(Return(true));
+    EXPECT_CALL(*resRepo,   setStatus(_, _)).Times(0);
 
     service->endAllocation(1, 1);
 }
 
-// ── Delegation methods ────────────────────────────────────────────────────────
+
 
 TEST_F(AllocationServiceTest, GetByUserId_DelegatesToRepository) {
     std::vector<Allocation> expected = {{}, {}};

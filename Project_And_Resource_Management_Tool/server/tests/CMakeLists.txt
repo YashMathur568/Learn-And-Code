@@ -15,17 +15,25 @@ find_library(GMOCK_MAIN_LIB NAMES gmock_main PATHS C:/tools/msys64/mingw64/lib R
 set(SERVER_SRC "${CMAKE_CURRENT_SOURCE_DIR}/../src")
 
 set(SOURCES_UNDER_TEST
-    ${SERVER_SRC}/services/AllocationService.cpp
-    ${SERVER_SRC}/services/EmployeeService.cpp
-    ${SERVER_SRC}/services/TimesheetService.cpp
-    ${SERVER_SRC}/utils/ConfigLoader.cpp
+    ${SERVER_SRC}/services/src/AllocationService.cpp
+    ${SERVER_SRC}/services/src/AuthService.cpp
+    ${SERVER_SRC}/services/src/ProjectService.cpp
+    ${SERVER_SRC}/services/src/ResourceService.cpp
+    ${SERVER_SRC}/services/src/TimesheetService.cpp
+    ${SERVER_SRC}/services/src/UserService.cpp
+    ${SERVER_SRC}/security/src/JwtUtil.cpp
+    ${SERVER_SRC}/security/src/PasswordUtil.cpp
+    ${SERVER_SRC}/utils/src/ConfigLoader.cpp
 )
 
 # ── Test executable ────────────────────────────────────────────────────────────
 add_executable(prm-server-tests
     AllocationServiceTests.cpp
-    EmployeeServiceTests.cpp
+    AuthServiceTests.cpp
+    ProjectServiceTests.cpp
+    ResourceServiceTests.cpp
     TimesheetServiceTests.cpp
+    UserServiceTests.cpp
     ${SOURCES_UNDER_TEST}
 )
 
@@ -38,20 +46,37 @@ target_link_libraries(prm-server-tests PRIVATE
     ${GMOCK_MAIN_LIB}
     nlohmann_json::nlohmann_json
     jwt-cpp::jwt-cpp
+    OpenSSL::SSL
+    OpenSSL::Crypto
 )
 
 target_include_directories(prm-server-tests PRIVATE
     ${SERVER_SRC}
+    ${SERVER_SRC}/ai/inc
+    ${SERVER_SRC}/dto
+    ${SERVER_SRC}/email/inc
+    ${SERVER_SRC}/models
+    ${SERVER_SRC}/repositories/inc
+    ${SERVER_SRC}/security/inc
+    ${SERVER_SRC}/services/inc
+    ${SERVER_SRC}/utils/inc
     C:/tools/msys64/mingw64/include   # gmock/gmock.h
 )
 
 target_compile_definitions(prm-server-tests PRIVATE JWT_DISABLE_PICOJSON)
+
+# ── Coverage instrumentation ───────────────────────────────────────────────────
+target_compile_options(prm-server-tests PRIVATE --coverage -O0)
+target_link_options(prm-server-tests PRIVATE --coverage)
 
 # ── Register with CTest ────────────────────────────────────────────────────────
 include(GoogleTest)
 gtest_add_tests(TARGET prm-server-tests
     SOURCES
         AllocationServiceTests.cpp
-        EmployeeServiceTests.cpp
+        AuthServiceTests.cpp
+        ProjectServiceTests.cpp
+        ResourceServiceTests.cpp
         TimesheetServiceTests.cpp
+        UserServiceTests.cpp
 )

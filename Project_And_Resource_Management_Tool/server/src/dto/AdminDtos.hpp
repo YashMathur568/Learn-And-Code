@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../models/User.hpp"
-#include "../models/Employee.hpp"
-#include "../models/EmployeeSkill.hpp"
+#include "User.hpp"
+#include "Resource.hpp"
+#include "ResourceSkill.hpp"
 #include <nlohmann/json.hpp>
 #include <string>
 
@@ -14,7 +14,7 @@ struct CreateUserRequest {
     std::string role;
     std::string department;
     std::string designation;
-    int         managerId{0};  // Required when role == RESOURCE
+    int         managerId{0};
 
     static CreateUserRequest fromJson(const nlohmann::json& body) {
         CreateUserRequest request;
@@ -50,18 +50,32 @@ struct AssignManagerRequest {
     }
 };
 
-struct UpdateEmployeeRequest {
+struct UpdateResourceRequest {
     std::string fullName;
     std::string email;
     std::string department;
     std::string designation;
 
-    static UpdateEmployeeRequest fromJson(const nlohmann::json& body) {
-        UpdateEmployeeRequest request;
+    static UpdateResourceRequest fromJson(const nlohmann::json& body) {
+        UpdateResourceRequest request;
         request.fullName    = body.at("fullName").get<std::string>();
         request.email       = body.at("email").get<std::string>();
         request.department  = body.at("department").get<std::string>();
         request.designation = body.at("designation").get<std::string>();
+        return request;
+    }
+};
+
+struct ChangeRoleRequest {
+    std::string newRole;
+    std::string department;
+    std::string designation;
+
+    static ChangeRoleRequest fromJson(const nlohmann::json& body) {
+        ChangeRoleRequest request;
+        request.newRole     = body.at("newRole").get<std::string>();
+        request.department  = body.value("department", "");
+        request.designation = body.value("designation", "");
         return request;
     }
 };
@@ -93,27 +107,27 @@ inline nlohmann::json userToJson(const User& user) {
     };
 }
 
-inline nlohmann::json employeeToJson(const Employee& employee) {
+inline nlohmann::json resourceToJson(const Resource& resource) {
     nlohmann::json json = {
-        {"userId",      employee.userId},
-        {"role",        employee.role},
-        {"fullName",    employee.fullName},
-        {"email",       employee.email},
-        {"department",  employee.department},
-        {"designation", employee.designation},
-        {"status",      employee.status},
-        {"isActive",    employee.isActive},
-        {"isFrozen",    employee.isFrozen}
+        {"userId",      resource.userId},
+        {"role",        resource.role},
+        {"fullName",    resource.fullName},
+        {"email",       resource.email},
+        {"department",  resource.department},
+        {"designation", resource.designation},
+        {"status",      resource.status},
+        {"isActive",    resource.isActive},
+        {"isFrozen",    resource.isFrozen}
     };
-    if (employee.managerId > 0) {
-        json["managerId"] = employee.managerId;
+    if (resource.managerId > 0) {
+        json["managerId"] = resource.managerId;
     } else {
         json["managerId"] = nullptr;
     }
     return json;
 }
 
-inline nlohmann::json skillToJson(const EmployeeSkill& skill) {
+inline nlohmann::json skillToJson(const ResourceSkill& skill) {
     return {
         {"skillId",     skill.skillId},
         {"userId",      skill.userId},

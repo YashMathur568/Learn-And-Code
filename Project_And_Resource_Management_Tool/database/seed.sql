@@ -47,15 +47,23 @@ VALUES (
     'System Admin',
     'admin@prm.local',
     'admin',
-    'pbkdf2:sha256:100000:1a2b3c4d5e6f708192a3b4c5d6e7f809:cf348f899d6fb6d3a5f4b32e0df23e5e7e610de081695359f15f09c523de3e60',
+    'pbkdf2:sha256:100000:50db971fd37ea04784012d5359eee28d:c2cc45b429f785f887d6ea7e6bf5ed7bedd541e25ab02130fe6114c9b16be73b',
     1,
     1,
     NOW()
 );
 
+-- Admin profile
+INSERT INTO user_profile (user_id, manager_id, department, designation)
+SELECT user_id, NULL, 'Administration', 'Administrator'
+FROM users WHERE username = 'admin';
+
 -- \u2500\u2500\u2500 System config \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 INSERT INTO system_config (config_key, config_value) VALUES
-    ('llm_provider',             'gemini'),
+    ('llm_provider',             'gemma'),
+    ('llm_api_key',              'YOUR_API_KEY_HERE'),
+    ('llm_model',                'gemma-2'),
+    ('gemma_llm_host',           'http://localhost:8080'),
     ('scheduler_interval_hours', '4'),
     ('max_weekly_hours',         '40');
 

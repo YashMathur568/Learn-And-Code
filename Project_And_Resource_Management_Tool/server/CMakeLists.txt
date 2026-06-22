@@ -83,6 +83,15 @@ add_executable(prm-server ${SERVER_SOURCES})
 target_include_directories(prm-server
     PRIVATE
         src
+        src/ai/inc
+        src/controllers/inc
+        src/dto
+        src/email/inc
+        src/models
+        src/repositories/inc
+        src/security/inc
+        src/services/inc
+        src/utils/inc
         ${MYSQL_CPPCONN_INCLUDE_DIR}
         C:/tools/msys64/mingw64/include
 )

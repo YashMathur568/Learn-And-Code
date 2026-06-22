@@ -1,5 +1,5 @@
 #pragma once
-#include "../../src/repositories/IProjectRepository.hpp"
+#include "IProjectRepository.hpp"
 #include <gmock/gmock.h>
 
 class MockProjectRepository : public IProjectRepository {

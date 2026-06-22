@@ -8,4 +8,5 @@ struct Milestone {
     std::string title;
     std::string dueDate;
     std::string status;
+    int         storyPoints{0};
 };

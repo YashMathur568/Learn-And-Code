@@ -2,26 +2,26 @@
 #include <gmock/gmock.h>
 #include <fstream>
 
-#include "services/TimesheetService.hpp"
-#include "utils/AppException.hpp"
-#include "utils/ConfigLoader.hpp"
+#include "TimesheetService.hpp"
+#include "AppException.hpp"
+#include "ConfigLoader.hpp"
 #include "mocks/MockTimesheetRepository.hpp"
 #include "mocks/MockAllocationRepository.hpp"
-#include "mocks/MockEmployeeRepository.hpp"
+#include "mocks/MockResourceRepository.hpp"
 
 using ::testing::Return;
 using ::testing::_;
 using ::testing::AnyNumber;
 using ::testing::NiceMock;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
-// Last Monday that is guaranteed to be in the past (2026-06-08 is a Monday)
+
+
 static const std::string PAST_MONDAY   = "2026-06-08";
-// A future Monday
+
 static const std::string FUTURE_MONDAY = "2099-01-07";
-// A day that is not a Monday
-static const std::string NOT_A_MONDAY  = "2026-06-09";  // Tuesday
+
+static const std::string NOT_A_MONDAY  = "2026-06-09";
 
 static SubmitTimesheetRequest makeValidRequest(const std::string& weekStart = PAST_MONDAY) {
     SubmitTimesheetRequest req;
@@ -35,30 +35,30 @@ static SubmitTimesheetRequest makeValidRequest(const std::string& weekStart = PA
 }
 
 static Timesheet makeStoredTimesheet(int id = 100, int userId = 1) {
-    Timesheet ts;
-    ts.timesheetId = id;
-    ts.userId      = userId;
-    ts.weekStart   = PAST_MONDAY;
-    ts.status      = "SUBMITTED";
-    return ts;
+    Timesheet timesheet;
+    timesheet.timesheetId = id;
+    timesheet.userId      = userId;
+    timesheet.weekStart   = PAST_MONDAY;
+    timesheet.status      = "SUBMITTED";
+    return timesheet;
 }
 
-// ── Bootstrap: ConfigLoader singleton must be initialised before tests use it.
-// We set maxWeeklyHours = 40 by pointing at the real config.json in the build
-// directory. If that file is absent we just leave the default (40) baked in.
-// ─────────────────────────────────────────────────────────────────────────────
 
-// Helper: force ConfigLoader into the loaded state with default values by
-// writing a minimal config.json next to the test binary and loading it once.
+
+
+
+
+
+
 static void bootstrapConfigLoader() {
     static bool done = false;
     if (done) return;
     done = true;
 
-    // Write a minimal valid config file to the current working directory
+
     const char* minimalConfig = R"({
         "database": {"host":"localhost","port":3306,"name":"prm","username":"root","password":""},
-        "llm":      {"provider":"gemma","apiKey":"","geminiModel":"","groqModel":"","companyHost":"","companyModel":""},
+        "llm":      {"provider":"gemma","apiKey":"","geminiModel":"","groqModel":"","gemmaHost":"","gemmaModel":""},
         "email":    {"enabled":false,"smtpHost":"","smtpPort":587,"username":"","password":"","fromAddress":""},
         "jwtSecret":              "test_secret",
         "serverPort":             8080,
@@ -78,7 +78,7 @@ class TimesheetServiceTest : public ::testing::Test {
 protected:
     std::shared_ptr<MockTimesheetRepository>  tsRepo;
     std::shared_ptr<MockAllocationRepository> allocRepo;
-    std::shared_ptr<MockEmployeeRepository>   empRepo;
+    std::shared_ptr<MockResourceRepository>   resRepo;
     std::unique_ptr<TimesheetService>         service;
 
     void SetUp() override {
@@ -86,58 +86,58 @@ protected:
 
         tsRepo    = std::make_shared<NiceMock<MockTimesheetRepository>>();
         allocRepo = std::make_shared<NiceMock<MockAllocationRepository>>();
-        empRepo   = std::make_shared<NiceMock<MockEmployeeRepository>>();
-        service   = std::make_unique<TimesheetService>(tsRepo, allocRepo, empRepo);
+        resRepo   = std::make_shared<NiceMock<MockResourceRepository>>();
+        service   = std::make_unique<TimesheetService>(tsRepo, allocRepo, resRepo);
     }
 };
 
-// ── submitTimesheet: account-frozen check ────────────────────────────────────
+
 
 TEST_F(TimesheetServiceTest, Submit_FrozenAccount_ThrowsValidation) {
-    EXPECT_CALL(*empRepo, isFrozen(1)).WillOnce(Return(true));
+    EXPECT_CALL(*resRepo, isFrozen(1)).WillOnce(Return(true));
     EXPECT_THROW(service->submitTimesheet(1, makeValidRequest()), ValidationException);
 }
 
-// ── submitTimesheet: empty entries ───────────────────────────────────────────
+
 
 TEST_F(TimesheetServiceTest, Submit_EmptyEntries_ThrowsValidation) {
-    EXPECT_CALL(*empRepo, isFrozen(1)).WillOnce(Return(false));
+    EXPECT_CALL(*resRepo, isFrozen(1)).WillOnce(Return(false));
     SubmitTimesheetRequest req;
     req.weekStart = PAST_MONDAY;
-    // no entries
+
     EXPECT_THROW(service->submitTimesheet(1, req), ValidationException);
 }
 
-// ── submitTimesheet: weekStart validation ────────────────────────────────────
+
 
 TEST_F(TimesheetServiceTest, Submit_WeekStartNotMonday_ThrowsValidation) {
-    EXPECT_CALL(*empRepo, isFrozen(1)).WillOnce(Return(false));
+    EXPECT_CALL(*resRepo, isFrozen(1)).WillOnce(Return(false));
     EXPECT_THROW(service->submitTimesheet(1, makeValidRequest(NOT_A_MONDAY)), ValidationException);
 }
 
 TEST_F(TimesheetServiceTest, Submit_WeekStartInFuture_ThrowsValidation) {
-    EXPECT_CALL(*empRepo, isFrozen(1)).WillOnce(Return(false));
+    EXPECT_CALL(*resRepo, isFrozen(1)).WillOnce(Return(false));
     EXPECT_THROW(service->submitTimesheet(1, makeValidRequest(FUTURE_MONDAY)), ValidationException);
 }
 
 TEST_F(TimesheetServiceTest, Submit_InvalidDateFormat_ThrowsValidation) {
-    EXPECT_CALL(*empRepo, isFrozen(1)).WillOnce(Return(false));
-    EXPECT_THROW(service->submitTimesheet(1, makeValidRequest("not-a-date")), ValidationException);
+    EXPECT_CALL(*resRepo, isFrozen(1)).WillOnce(Return(false));
+    EXPECT_THROW(service->submitTimesheet(1, makeValidRequest("not-allocation-date")), ValidationException);
 }
 
-// ── submitTimesheet: duplicate check ─────────────────────────────────────────
+
 
 TEST_F(TimesheetServiceTest, Submit_AlreadySubmittedThisWeek_ThrowsConflict) {
-    EXPECT_CALL(*empRepo, isFrozen(1)).WillOnce(Return(false));
+    EXPECT_CALL(*resRepo, isFrozen(1)).WillOnce(Return(false));
     EXPECT_CALL(*tsRepo,  findByUserAndWeek(1, PAST_MONDAY))
         .WillOnce(Return(makeStoredTimesheet()));
     EXPECT_THROW(service->submitTimesheet(1, makeValidRequest()), ConflictException);
 }
 
-// ── submitTimesheet: entry-level validation ───────────────────────────────────
+
 
 TEST_F(TimesheetServiceTest, Submit_EntryWithZeroProjectId_ThrowsValidation) {
-    EXPECT_CALL(*empRepo, isFrozen(1)).WillOnce(Return(false));
+    EXPECT_CALL(*resRepo, isFrozen(1)).WillOnce(Return(false));
     EXPECT_CALL(*tsRepo,  findByUserAndWeek(1, PAST_MONDAY)).WillOnce(Return(std::nullopt));
 
     SubmitTimesheetRequest req;
@@ -150,7 +150,7 @@ TEST_F(TimesheetServiceTest, Submit_EntryWithZeroProjectId_ThrowsValidation) {
 }
 
 TEST_F(TimesheetServiceTest, Submit_EntryWithZeroHours_ThrowsValidation) {
-    EXPECT_CALL(*empRepo, isFrozen(1)).WillOnce(Return(false));
+    EXPECT_CALL(*resRepo, isFrozen(1)).WillOnce(Return(false));
     EXPECT_CALL(*tsRepo,  findByUserAndWeek(1, PAST_MONDAY)).WillOnce(Return(std::nullopt));
 
     SubmitTimesheetRequest req;
@@ -163,28 +163,28 @@ TEST_F(TimesheetServiceTest, Submit_EntryWithZeroHours_ThrowsValidation) {
 }
 
 TEST_F(TimesheetServiceTest, Submit_NotAllocatedToProject_ThrowsValidation) {
-    EXPECT_CALL(*empRepo,   isFrozen(1)).WillOnce(Return(false));
+    EXPECT_CALL(*resRepo,   isFrozen(1)).WillOnce(Return(false));
     EXPECT_CALL(*tsRepo,    findByUserAndWeek(1, PAST_MONDAY)).WillOnce(Return(std::nullopt));
-    EXPECT_CALL(*allocRepo, isActivelyAllocated(1, 10)).WillOnce(Return(false));
+    EXPECT_CALL(*allocRepo, wasAllocatedDuringWeek(1, 10, PAST_MONDAY)).WillOnce(Return(false));
 
     EXPECT_THROW(service->submitTimesheet(1, makeValidRequest()), ValidationException);
 }
 
 TEST_F(TimesheetServiceTest, Submit_TotalHoursExceedWeeklyCap_ThrowsValidation) {
-    EXPECT_CALL(*empRepo,   isFrozen(1)).WillOnce(Return(false));
+    EXPECT_CALL(*resRepo,   isFrozen(1)).WillOnce(Return(false));
     EXPECT_CALL(*tsRepo,    findByUserAndWeek(1, PAST_MONDAY)).WillOnce(Return(std::nullopt));
-    EXPECT_CALL(*allocRepo, isActivelyAllocated(1, 10)).WillOnce(Return(true));
+    EXPECT_CALL(*allocRepo, wasAllocatedDuringWeek(1, 10, PAST_MONDAY)).WillOnce(Return(true));
 
     SubmitTimesheetRequest req;
     req.weekStart = PAST_MONDAY;
     TimesheetEntryRequest bigEntry;
     bigEntry.projectId = 10;
-    bigEntry.hours     = 99;   // way over 40-hour cap
+    bigEntry.hours     = 99;
     req.entries.push_back(bigEntry);
     EXPECT_THROW(service->submitTimesheet(1, req), ValidationException);
 }
 
-// ── submitTimesheet: success path ────────────────────────────────────────────
+
 
 TEST_F(TimesheetServiceTest, Submit_ValidRequest_CreatesTimesheetAndEntries) {
     const int newTimesheetId = 100;
@@ -195,9 +195,9 @@ TEST_F(TimesheetServiceTest, Submit_ValidRequest_CreatesTimesheetAndEntries) {
     storedEntry.projectId    = 10;
     storedEntry.hours        = 8;
 
-    EXPECT_CALL(*empRepo,   isFrozen(1)).WillOnce(Return(false));
+    EXPECT_CALL(*resRepo,   isFrozen(1)).WillOnce(Return(false));
     EXPECT_CALL(*tsRepo,    findByUserAndWeek(1, PAST_MONDAY)).WillOnce(Return(std::nullopt));
-    EXPECT_CALL(*allocRepo, isActivelyAllocated(1, 10)).WillOnce(Return(true));
+    EXPECT_CALL(*allocRepo, wasAllocatedDuringWeek(1, 10, PAST_MONDAY)).WillOnce(Return(true));
     EXPECT_CALL(*tsRepo,    create(_)).WillOnce(Return(newTimesheetId));
     EXPECT_CALL(*tsRepo,    findById(newTimesheetId)).WillOnce(Return(storedTs));
     EXPECT_CALL(*tsRepo,    addEntry(_));
@@ -211,15 +211,15 @@ TEST_F(TimesheetServiceTest, Submit_ValidRequest_CreatesTimesheetAndEntries) {
     EXPECT_EQ(result.entries[0].hours,      8);
 }
 
-// ── getByUserId ───────────────────────────────────────────────────────────────
+
 
 TEST_F(TimesheetServiceTest, GetByUserId_ReturnsTimesheetsWithEntries) {
-    Timesheet ts = makeStoredTimesheet(1, 5);
+    Timesheet timesheet = makeStoredTimesheet(1, 5);
     TimesheetEntry entry;
     entry.entryId     = 1;
     entry.timesheetId = 1;
 
-    EXPECT_CALL(*tsRepo, findByUserId(5)).WillOnce(Return(std::vector<Timesheet>{ts}));
+    EXPECT_CALL(*tsRepo, findByUserId(5)).WillOnce(Return(std::vector<Timesheet>{timesheet}));
     EXPECT_CALL(*tsRepo, getEntries(1)).WillOnce(Return(std::vector<TimesheetEntry>{entry}));
 
     const auto results = service->getByUserId(5);
@@ -233,7 +233,7 @@ TEST_F(TimesheetServiceTest, GetByUserId_NoTimesheets_ReturnsEmpty) {
     EXPECT_TRUE(service->getByUserId(5).empty());
 }
 
-// ── getTeamTimesheets ─────────────────────────────────────────────────────────
+
 
 TEST_F(TimesheetServiceTest, GetTeamTimesheets_ReturnsTimesheetsWithEntries) {
     Timesheet ts1 = makeStoredTimesheet(10, 2);

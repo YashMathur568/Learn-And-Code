@@ -47,17 +47,19 @@ entity "users" as USERS {
   * password_hash       : VARCHAR(255)
   * role_id             : INT      <<FK → roles.role_id>>
   * is_active           : TINYINT(1) DEFAULT 1
+  * is_frozen           : TINYINT(1) DEFAULT 0
   * password_expires_at : DATETIME DEFAULT CURRENT_TIMESTAMP
   * created_at          : DATETIME DEFAULT CURRENT_TIMESTAMP
+  note: is_frozen set by NotificationService after 2 missed reminders
 }
 
-entity "resource_profile" as RPROF {
+entity "user_profile" as RPROF {
   * user_id     : INT          <<PK, FK → users.user_id>>
   --
     manager_id  : INT          <<FK → users.user_id | NULLABLE>>
   * department  : VARCHAR(100)
   * designation : VARCHAR(100)
-  note: MANAGER + RESOURCE rows only
+  note: ALL roles — ADMIN defaults (Administration/Administrator),\nMANAGER defaults dept to Management,\nRESOURCE chooses both
 }
 
 entity "resource_status" as RSTATUS {
@@ -126,6 +128,17 @@ entity "timesheet_entries" as TSE {
     activity_tags  : TEXT
 }
 
+entity "timesheet_reminder_log" as REMLOG {
+  * id                : INT AUTO_INCREMENT <<PK>>
+  --
+  * user_id           : INT      <<FK → users.user_id>>
+  * week_start        : DATE
+    reminder1_sent_at : DATETIME <<NULLABLE>>
+    reminder2_sent_at : DATETIME <<NULLABLE>>
+    frozen_at         : DATETIME <<NULLABLE>>
+  note: one row per (user_id, week_start) pair
+}
+
 entity "system_config" as CFG {
   * config_key    : VARCHAR(50) <<PK>>
   --
@@ -152,25 +165,29 @@ note top of PERMS
 end note
 
 note top of RPERMS
-  Runtime-editable by ADMIN.
+  Seeded at startup; runtime-editable by ADMIN.
   expires_at NULL = permanent grant.
-  expires_at set = time-limited grant (e.g. 2 hrs).
-  Checked by PermissionGuard on each request.
+  expires_at set = time-limited grant.
+  NOTE: Enforced by PermissionGuard on every request.
+  PermissionGuard::require / requireAny replaces RoleGuard role checks in all controllers.
 end note
 
 note top of USERS
   Pure identity table — no role-specific fields.
-  password_expires_at = NOW() on create (force change).
+  password_expires_at = NOW() on create (forces password change on first login).
   password_expires_at = NOW()+3mo after password change.
+  is_frozen = 1 locks timesheet submission; set by NotificationService
+  after 2 missed-week reminders. Manager can restore via API.
   All roles present here; ADMIN has no profile/status rows.
 end note
 
 note right of RPROF
-  One row per MANAGER or RESOURCE.
-  ADMIN has no row here.
+  One row per user (ALL roles).
+  ADMIN: department=Administration, designation=Administrator.
+  MANAGER: designation chosen, department=Management.
+  RESOURCE: both chosen at creation time.
   manager_id is self-referential via users.user_id.
   manager_id NULL = top-level (no one above).
-  MANAGERs can also have a manager above them.
 end note
 
 note right of RSTATUS
@@ -208,10 +225,10 @@ ROLES    ||--|{   USERS    : "1 role\n→ 1..* users"
 ROLES    ||--o{   RPERMS   : "1 role\n→ 0..* grants"
 PERMS    ||--o{   RPERMS   : "1 permission\n→ 0..* grants"
 
-' users → resource_profile (MANAGER + RESOURCE only)
-USERS    ||--o|   RPROF    : "1 user\n→ 0..1 profile"
+' users → user_profile (ALL roles)
+USERS    ||--|{   RPROF    : "1 user\n→ 1 profile"
 
-' resource_profile self-ref via users (manager_id)
+' user_profile self-ref via users (manager_id)
 USERS    ||--o{   RPROF    : "1 manager\n→ 0..* reports"
 
 ' users → resource_status (RESOURCE only)
@@ -236,5 +253,8 @@ PROJ     ||--o{   TSE      : "1 project\n→ 0..* entries"
 
 ' timesheet → entries
 TS       ||--|{   TSE      : "1 timesheet\n→ 1..* entries"
+
+' users → timesheet_reminder_log
+USERS    ||--o{   REMLOG   : "1 user\n→ 0..* reminder logs"
 
 @enduml

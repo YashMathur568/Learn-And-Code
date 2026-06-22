@@ -13,6 +13,9 @@ add_executable(prm-client ${CLIENT_SOURCES})
 target_include_directories(prm-client
     PRIVATE
         src
+        src/api/inc
+        src/core
+        src/screens/inc
 )
 
 target_link_libraries(prm-client

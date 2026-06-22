@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../models/Allocation.hpp"
-#include "../models/Timesheet.hpp"
-#include "../models/TimesheetEntry.hpp"
+#include "Allocation.hpp"
+#include "Timesheet.hpp"
+#include "TimesheetEntry.hpp"
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
@@ -82,6 +82,7 @@ inline nlohmann::json entryToJson(const TimesheetEntry& entry) {
         {"entryId",      entry.entryId},
         {"timesheetId",  entry.timesheetId},
         {"projectId",    entry.projectId},
+        {"projectName",  entry.projectName},
         {"hours",        entry.hours},
         {"activityTags", entry.activityTags}
     };

@@ -1,10 +1,10 @@
-#include "core/AppSession.hpp"
-#include "core/ConsoleUtil.hpp"
-#include "api/ApiClient.hpp"
-#include "screens/LoginScreen.hpp"
-#include "screens/AdminMenuScreen.hpp"
-#include "screens/ManagerMenuScreen.hpp"
-#include "screens/EmployeeMenuScreen.hpp"
+#include "AppSession.hpp"
+#include "ConsoleUtil.hpp"
+#include "ApiClient.hpp"
+#include "LoginScreen.hpp"
+#include "AdminMenuScreen.hpp"
+#include "ManagerMenuScreen.hpp"
+#include "ResourceMenuScreen.hpp"
 
 #include <iostream>
 #include <cstdlib>
@@ -14,17 +14,17 @@
 
 int main() {
 #ifdef _WIN32
-    // Enable UTF-8 output
+
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
-    // Enable ANSI escape codes (clear screen, colours) in Windows console
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    DWORD dwMode = 0;
-    GetConsoleMode(hOut, &dwMode);
-    SetConsoleMode(hOut, dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+
+    HANDLE consoleOutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD consoleMode = 0;
+    GetConsoleMode(consoleOutputHandle, &consoleMode);
+    SetConsoleMode(consoleOutputHandle, consoleMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 #endif
-    const std::string baseUrl = "http://localhost:8080";
-    const ApiClient   api(baseUrl);
+    const std::string baseApiUrl = "http://localhost:8080";
+    const ApiClient   api(baseApiUrl);
 
     while (true) {
         ConsoleUtil::clearScreen();
@@ -37,24 +37,28 @@ int main() {
                   << "2. Exit\n"
                   << "\nEnter option: ";
 
-        std::string opt;
-        std::getline(std::cin, opt);
+        std::string selectedOption;
+        std::getline(std::cin, selectedOption);
 
-        if (opt == "2") {
+        if (selectedOption == "2") {
             ConsoleUtil::clearScreen();
             std::cout << "Goodbye.\n";
             return EXIT_SUCCESS;
         }
 
-        if (opt != "1") continue;
+        if (selectedOption != "1") {
+            ConsoleUtil::printError("Invalid option. Please enter 1 or 2.");
+            ConsoleUtil::pause();
+            continue;
+        }
 
-        const bool ok = showLoginScreen(api);
-        if (!ok) continue;
+        const bool loginSuccess = showLoginScreen(api);
+        if (!loginSuccess) continue;
 
         const std::string role = AppSession::get().role;
         if (role == "ADMIN")          showAdminMenu(api);
         else if (role == "MANAGER")   showManagerMenu(api);
-        else if (role == "RESOURCE")  showEmployeeMenu(api);
+        else if (role == "RESOURCE")  showResourceMenu(api);
         else {
             ConsoleUtil::printError("Unknown role: " + role);
             AppSession::get().clear();

@@ -11,3 +11,6 @@ logs/
 .cache/
 compile_commands.json
 _deps/
+Project_Design/api-spec.openapi.yaml
+database/seed_test_data.sql
+coverage/

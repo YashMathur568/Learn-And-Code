@@ -4,27 +4,28 @@
 #include <algorithm>
 #include <cstdlib>
 
-#include "utils/ConfigLoader.hpp"
-#include "utils/DatabasePool.hpp"
-#include "utils/AppException.hpp"
-#include "controllers/AuthController.hpp"
-#include "controllers/UserController.hpp"
-#include "controllers/EmployeeController.hpp"
-#include "controllers/ProjectController.hpp"
-#include "controllers/ConfigController.hpp"
-#include "controllers/ManagerController.hpp"
-#include "controllers/EmployeeApiController.hpp"
-#include "controllers/AIController.hpp"
-#include "services/SchedulerService.hpp"
-#include "services/NotificationService.hpp"
-#include "email/EmailService.hpp"
-#include "ai/GemmaAdapter.hpp"
-#include "repositories/MySQLEmployeeRepository.hpp"
-#include "repositories/MySQLAllocationRepository.hpp"
-#include "repositories/MySQLProjectRepository.hpp"
-#include "repositories/MySQLMilestoneRepository.hpp"
-#include "repositories/MySQLTimesheetRepository.hpp"
-#include "security/JwtMiddleware.hpp"
+#include "ConfigLoader.hpp"
+#include "DatabasePool.hpp"
+#include "AppException.hpp"
+#include "AuthController.hpp"
+#include "UserController.hpp"
+#include "ResourceController.hpp"
+#include "ProjectController.hpp"
+#include "ConfigController.hpp"
+#include "ManagerController.hpp"
+#include "ResourceApiController.hpp"
+#include "AIController.hpp"
+#include "SchedulerService.hpp"
+#include "NotificationService.hpp"
+#include "EmailService.hpp"
+#include "LLMProviderManager.hpp"
+#include "MySQLSystemConfigRepository.hpp"
+#include "MySQLResourceRepository.hpp"
+#include "MySQLAllocationRepository.hpp"
+#include "MySQLProjectRepository.hpp"
+#include "MySQLMilestoneRepository.hpp"
+#include "MySQLTimesheetRepository.hpp"
+#include "JwtMiddleware.hpp"
 
 int main() {
     try {
@@ -39,26 +40,75 @@ int main() {
             appConfig.database.password
         );
 
-        auto employeeRepo    = std::make_shared<MySQLEmployeeRepository>();
+
+        auto resourceRepo    = std::make_shared<MySQLResourceRepository>();
         auto allocationRepo  = std::make_shared<MySQLAllocationRepository>();
         auto projectRepo     = std::make_shared<MySQLProjectRepository>();
         auto milestoneRepo   = std::make_shared<MySQLMilestoneRepository>();
         auto timesheetRepo   = std::make_shared<MySQLTimesheetRepository>();
+        auto systemConfigRepo = std::make_shared<MySQLSystemConfigRepository>();
+
+
+        std::string llmProvider = appConfig.llm.activeProvider;
+        std::string llmApiKey;
+        std::string llmModel;
+        std::string gemmaHost = appConfig.llm.gemmaHost;
+
+        if (llmProvider == "gemini") {
+            llmApiKey = appConfig.llm.geminiApiKey;
+            llmModel  = appConfig.llm.geminiModel;
+        } else if (llmProvider == "groq") {
+            llmApiKey = appConfig.llm.groqApiKey;
+            llmModel  = appConfig.llm.groqModel;
+        } else {
+            llmApiKey = appConfig.llm.gemmaApiKey;
+            llmModel  = appConfig.llm.gemmaModel;
+        }
+
+        try {
+            auto dbConfig = systemConfigRepo->getAllConfig();
+            if (!dbConfig["llm_provider"].empty()) {
+                llmProvider = dbConfig["llm_provider"];
+            }
+            if (!dbConfig["llm_api_key"].empty()) {
+                llmApiKey = dbConfig["llm_api_key"];
+            }
+            if (!dbConfig["llm_model"].empty()) {
+                llmModel = dbConfig["llm_model"];
+            }
+            if (!dbConfig["gemma_llm_host"].empty()) {
+                gemmaHost = dbConfig["gemma_llm_host"];
+            }
+            std::cout << "[INFO] Loaded LLM configuration from database: provider="
+                      << llmProvider << std::endl;
+        } catch (...) {
+            std::cout << "[INFO] Using LLM configuration from config.json: provider="
+                      << llmProvider << std::endl;
+        }
+
+
+        auto llmProviderManager = std::make_shared<LLMProviderManager>(
+            systemConfigRepo,
+            llmProvider,
+            llmApiKey,
+            llmModel,
+            gemmaHost
+        );
+        LLMProviderManager::setInstance(llmProviderManager);
 
         auto emailSvc  = std::make_shared<EmailService>(appConfig.email);
-        auto llmAdapter = std::make_shared<GemmaAdapter>(appConfig.llm.companyHost, appConfig.llm.apiKey, appConfig.llm.companyModel);
         auto notifSvc  = std::make_shared<NotificationService>(
             emailSvc,
-            employeeRepo,
+            resourceRepo,
             timesheetRepo,
             projectRepo,
             milestoneRepo,
             allocationRepo,
-            llmAdapter
+            llmProviderManager
         );
 
         SchedulerService scheduler(
-            employeeRepo,
+            resourceRepo,
             allocationRepo,
             projectRepo,
             milestoneRepo,
